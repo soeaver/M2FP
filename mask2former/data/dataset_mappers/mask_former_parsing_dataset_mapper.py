@@ -83,16 +83,16 @@ class MaskFormerParsingDatasetMapper:
             # for single person human parsing, e.g. LIP and ATR
             single_human_aug = True
 
-            train_size = cfg.INPUT.SINGLE_PARSING.SCALES[0]
-            scale_factor = cfg.INPUT.SINGLE_PARSING.SCALE_FACTOR
+            train_size = cfg.INPUT.SINGLE_HUMAN.SIZES[0]
+            scale_factor = cfg.INPUT.SINGLE_HUMAN.SCALE_FACTOR
 
             augs = [
                 T.RandomFlip(),
                 ResizeByScale(scale_factor)
             ]
 
-            if cfg.INPUT.SINGLE_PARSING.ROTATION:
-                rot_factor = cfg.INPUT.SINGLE_PARSING.ROT_FACTOR
+            if cfg.INPUT.SINGLE_HUMAN.ROTATION:
+                rot_factor = cfg.INPUT.SINGLE_HUMAN.ROT_FACTOR
                 augs.append(
                     RandomCenterRotation(rot_factor)
                 )

@@ -45,6 +45,11 @@ INPUT:
   COLOR_AUG_SSD: True
   FORMAT: "RGB"
   DATASET_MAPPER_NAME: "mask_former_semantic_hp"
+  SINGLE_HUMAN:
+    SIZES: ([384, 512],)
+    SCALE_FACTOR: 0.3
+    ROTATION: True
+    ROT_FACTOR: 40
 TEST:
   EVAL_PERIOD: 10000
   AUG:
