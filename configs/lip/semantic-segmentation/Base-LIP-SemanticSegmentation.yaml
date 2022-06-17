@@ -17,9 +17,9 @@ DATASETS:
   TRAIN: ("lip_semseg_train",)
   TEST: ("lip_semseg_val",)
 SOLVER:
-  IMS_PER_BATCH: 16
-  BASE_LR: 0.0001
-  MAX_ITER: 100000
+  IMS_PER_BATCH: 64
+  BASE_LR: 0.0004
+  MAX_ITER: 60000 # ~ 126 epoch
   WARMUP_FACTOR: 1.0
   WARMUP_ITERS: 0
   WEIGHT_DECAY: 0.05
@@ -46,6 +46,7 @@ INPUT:
   FORMAT: "RGB"
   DATASET_MAPPER_NAME: "mask_former_semantic_hp"
   SINGLE_HUMAN:
+    ENABLED: True # use single human aug
     SIZES: ([384, 512],)
     SCALE_FACTOR: 0.3
     ROTATION: True
@@ -54,7 +55,7 @@ TEST:
   EVAL_PERIOD: 10000
   AUG:
     ENABLED: False
-    MIN_SIZES: [256, 384, 512, 640, 768, 896]
+    MIN_SIZES: [384]
     MAX_SIZE: 3584
     FLIP: True
 DATALOADER:

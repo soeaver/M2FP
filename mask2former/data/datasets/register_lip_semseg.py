@@ -39,6 +39,7 @@ _PREDEFINED_SPLITS = {
 
 LIP_FLIP_MAP = ((14, 15), (16, 17), (18, 19))
 
+
 def register_lip_semseg(root):
     root = os.path.join(root, "lip")
     for name, (image_dir, gt_dir) in _PREDEFINED_SPLITS.items():

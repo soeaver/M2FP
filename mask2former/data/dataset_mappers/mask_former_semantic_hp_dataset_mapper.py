@@ -76,21 +76,16 @@ class MaskFormerSemanticHPDatasetMapper:
     @classmethod
     def from_config(cls, cfg, is_train=True):
         # Build augmentation
-
-        single_human_aug = False
         train_size = None
 
-        if "lip" in cfg.DATASETS.TRAIN[0]:
+        if cfg.INPUT.SINGLE_HUMAN.ENABLED:
             # for single person human parsing, e.g. LIP and ATR
-            single_human_aug = True
-
             train_size = cfg.INPUT.SINGLE_HUMAN.SIZES[0]
             scale_factor = cfg.INPUT.SINGLE_HUMAN.SCALE_FACTOR
 
             augs = [
                 ResizeByScale(scale_factor)
             ]
-
             if cfg.INPUT.SINGLE_HUMAN.ROTATION:
                 rot_factor = cfg.INPUT.SINGLE_HUMAN.ROT_FACTOR
                 augs.append(
@@ -127,7 +122,7 @@ class MaskFormerSemanticHPDatasetMapper:
             "ignore_label": meta.ignore_label,
             "size_divisibility": cfg.INPUT.SIZE_DIVISIBILITY,
             "flip_map": meta.flip_map,
-            "single_human_aug": single_human_aug,
+            "single_human_aug": cfg.INPUT.SINGLE_HUMAN.ENABLED,
             "train_size": train_size
         }
         return ret

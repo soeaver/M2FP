@@ -76,6 +76,7 @@ _PREDEFINED_SPLITS = {
 
 MHPv2_FLIP_MAP = ((5, 6), (7, 8), (22, 23), (24, 25), (26, 27), (28, 29), (30, 31), (32, 33))
 
+
 def register_mhpv2_semseg(root):
     root = os.path.join(root, "mhpv2")
     for name, (image_dir, gt_dir) in _PREDEFINED_SPLITS.items():

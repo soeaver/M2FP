@@ -269,7 +269,6 @@ class MaskFormer(nn.Module):
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})  # for each image
 
-
                 if self.sem_seg_postprocess_before_inference:
                     if not self.single_human:
                         mask_pred_result = retry_if_cuda_oom(sem_seg_postprocess)(
@@ -425,7 +424,7 @@ class MaskFormer(nn.Module):
 
         # calculate average mask prob
         mask_scores_per_image = (mask_pred.sigmoid().flatten(1) * result.pred_masks.flatten(1)).sum(1) / (
-                    result.pred_masks.flatten(1).sum(1) + 1e-6)
+                result.pred_masks.flatten(1).sum(1) + 1e-6)
         result.scores = scores_per_image * mask_scores_per_image
         result.pred_classes = labels_per_image
         return result
@@ -629,7 +628,7 @@ class MaskFormer(nn.Module):
 
         parsing_scores = [human_score]
         parsing_probs = [1 - human_mask.sigmoid()]
-        
+
         valid_cls = 1
         for cls_ind in range(1, self.sem_seg_head.num_classes):  # skip class 'human'
             cate_ind = torch.where(part_labels == cls_ind)[0]
