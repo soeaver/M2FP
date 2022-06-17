@@ -1,0 +1,45 @@
+MODEL:
+  BACKBONE:
+    FREEZE_AT: 0
+    NAME: "build_resnet_backbone"
+  WEIGHTS: "./weights/R-50.pkl"
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  RESNETS:
+    DEPTH: 50
+    STEM_TYPE: "basic"  # not used
+    STEM_OUT_CHANNELS: 64
+    STRIDE_IN_1X1: False
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+    # NORM: "SyncBN"
+    RES5_MULTI_GRID: [1, 1, 1]  # not used
+DATASETS:
+  TRAIN: ("lip_instance_train",)
+  TEST: ("lip_instance_val",)
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0001
+  STEPS: (14700, 19500)
+  MAX_ITER: 22000  # 12 ep for cihp train with 28280 images
+  WARMUP_FACTOR: 1.0
+  WARMUP_ITERS: 10
+  WEIGHT_DECAY: 0.05
+  OPTIMIZER: "ADAMW"
+  BACKBONE_MULTIPLIER: 0.1
+  CLIP_GRADIENTS:
+    ENABLED: True
+    CLIP_TYPE: "full_model"
+    CLIP_VALUE: 0.01
+    NORM_TYPE: 2.0
+  AMP:
+    ENABLED: True
+INPUT:
+  MIN_SIZE_TRAIN: (512, 640, 704, 768, 800, 864)
+  MAX_SIZE_TRAIN: 1400
+  DATASET_MAPPER_NAME: "mask_former_parsing"
+TEST:
+  EVAL_PERIOD: 5000
+DATALOADER:
+  FILTER_EMPTY_ANNOTATIONS: True
+  NUM_WORKERS: 4
+VERSION: 2

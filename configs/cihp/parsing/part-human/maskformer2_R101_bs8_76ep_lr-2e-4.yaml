@@ -1,0 +1,25 @@
+_BASE_: maskformer2_R50_bs8_76ep.yaml
+MODEL:
+  WEIGHTS: "./weights/R-101.pkl"
+  RESNETS:
+    DEPTH: 101
+    STEM_TYPE: "basic"  # not used
+    STEM_OUT_CHANNELS: 64
+    STRIDE_IN_1X1: False
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+    # NORM: "SyncBN"
+    RES5_MULTI_GRID: [1, 1, 1]  # not used
+SOLVER:
+  IMS_PER_BATCH: 8  # 16
+  BASE_LR: 0.0002 # 0.0001, normalized zoom to 0.00005 with batch_size 8
+  STEPS: (210000, 250000)  # (105000, 125000)
+  MAX_ITER: 270000  # 135000  # 1.5x for coco_2017_train
+INPUT:
+  MIN_SIZE_TEST: 800
+TEST:
+  EVAL_PERIOD: 30000
+  AUG:
+    ENABLED: True
+    MIN_SIZES: (800,)
+    MAX_SIZE: 1400
+    FLIP: True

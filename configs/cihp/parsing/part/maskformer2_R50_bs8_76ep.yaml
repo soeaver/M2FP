@@ -1,0 +1,70 @@
+_BASE_: ../Base-CIHP-Parsing.yaml
+MODEL:
+  META_ARCHITECTURE: "MaskFormer"
+  SEM_SEG_HEAD:
+    NAME: "MaskFormerHead"
+    IGNORE_VALUE: 255
+    NUM_CLASSES: 19
+    LOSS_WEIGHT: 1.0
+    CONVS_DIM: 256
+    MASK_DIM: 256
+    NORM: "GN"
+    # pixel decoder
+    PIXEL_DECODER_NAME: "MSDeformAttnPixelDecoder"
+    IN_FEATURES: ["res2", "res3", "res4", "res5"]
+    DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES: ["res3", "res4", "res5"]
+    COMMON_STRIDE: 4
+    TRANSFORMER_ENC_LAYERS: 6
+  MASK_FORMER:
+    TRANSFORMER_DECODER_NAME: "MultiScaleMaskedTransformerDecoder"
+    TRANSFORMER_IN_FEATURE: "multi_scale_pixel_decoder"
+    DEEP_SUPERVISION: True
+    NO_OBJECT_WEIGHT: 0.1
+    CLASS_WEIGHT: 2.0
+    MASK_WEIGHT: 5.0
+    DICE_WEIGHT: 5.0
+    HIDDEN_DIM: 256
+    NUM_OBJECT_QUERIES: 100
+    NHEADS: 8
+    DROPOUT: 0.0
+    DIM_FEEDFORWARD: 2048
+    ENC_LAYERS: 0
+    PRE_NORM: False
+    ENFORCE_INPUT_PROJ: False
+    SIZE_DIVISIBILITY: 32
+    DEC_LAYERS: 10  # 9 decoder layers, add one for the loss on learnable query
+    TRAIN_NUM_POINTS: 12544
+    OVERSAMPLE_RATIO: 3.0
+    IMPORTANCE_SAMPLE_RATIO: 0.75
+    TEST:
+      SEMANTIC_ON: False
+      INSTANCE_ON: True
+      PANOPTIC_ON: False
+      PARSING_ON: True
+      OVERLAP_THRESHOLD: 0.8
+      OBJECT_MASK_THRESHOLD: 0.8
+      PARSING:
+        PARSING_INS_SCORE_THR: 0.3
+        METRICS: ("mIoU", "APr")
+SOLVER:
+  IMS_PER_BATCH: 8  # 16
+  BASE_LR: 0.00005 # 0.0001
+  STEPS: (210000, 250000)  # (105000, 125000)
+  MAX_ITER: 270000  # 135000  # 1.5x for coco_2017_train
+INPUT:
+  MIN_SIZE_TEST: 640
+TEST:
+  EVAL_PERIOD: 30000
+  AUG:
+    ENABLED: False
+    MIN_SIZES: (640,)
+    MAX_SIZE: 1400
+    FLIP: True
+
+# 702:
+# 672：62.23,
+# 640: 62.27, h_flip: 62.91
+# 608: 62.14, h_flip: 62.92
+# 576: 61.78
+# 544: 61.68
+# 512: 61.43
