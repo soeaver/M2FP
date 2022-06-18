@@ -75,14 +75,11 @@ class MaskFormerParsingDatasetMapper:
     @classmethod
     def from_config(cls, cfg, is_train=True):
         # decide whether to parse multi person
-        single_human_aug = False
         train_size = None
 
         # Build augmentation
-        if "lip" in cfg.DATASETS.TRAIN[0]:
+        if cfg.INPUT.SINGLE_HUMAN.ENABLED:
             # for single person human parsing, e.g. LIP and ATR
-            single_human_aug = True
-
             train_size = cfg.INPUT.SINGLE_HUMAN.SIZES[0]
             scale_factor = cfg.INPUT.SINGLE_HUMAN.SCALE_FACTOR
 
@@ -119,7 +116,7 @@ class MaskFormerParsingDatasetMapper:
             "flip_map": meta.flip_map,
             "with_human_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_HUMAN_INSTANCE,
             "with_bkg_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_BKG_INSTANCE,
-            "single_human_aug": single_human_aug,
+            "single_human_aug": cfg.INPUT.SINGLE_HUMAN.ENABLED,
             "train_size": train_size
         }
         return ret

@@ -12,6 +12,7 @@ from torch import nn
 from torch.nn.parallel import DistributedDataParallel
 
 from detectron2.data.detection_utils import read_image
+from detectron2.data import MetadataCatalog
 from detectron2.modeling import DatasetMapperTTA
 
 from detectron2.data.transforms import (
@@ -30,7 +31,7 @@ __all__ = [
     "SemanticSegmentorWithTTA",
 ]
 
-HUMAN_PARSING_DATASETS = ["cihp", "mhp", "lip",]
+HUMAN_PARSING_DATASETS = ["cihp", "mhp", "lip", "ATR"]
 
 class SingleHumanDatasetMapperTTA:
     """
@@ -114,7 +115,7 @@ class ParsingWithTTA(nn.Module):
         self.merge_mode = merge_mode
 
         if tta_mapper is None:
-            if "lip" in cfg.DATASETS.TEST[0]:
+            if cfg.INPUT.SINGLE_HUMAN.ENABLED:
                 tta_mapper = SingleHumanDatasetMapperTTA(cfg)
             else:
                 tta_mapper = DatasetMapperTTA(cfg)
@@ -268,17 +269,17 @@ class ParsingWithTTA(nn.Module):
 
     def flip_semantic_back(self, predictions):
         spatial_flipback_predictions = predictions.flip(dims=[2])
-        spatial_channel_flipback_predictions = copy.deepcopy(spatial_flipback_predictions)
+        channel_flipback_predictions = copy.deepcopy(spatial_flipback_predictions)
 
         # channel transaction to flip human part label
         for ori_label, new_label in self.flip_map:
             org_channel = spatial_flipback_predictions[ori_label, :, :]
             new_channel = spatial_flipback_predictions[new_label, :, :]
 
-            spatial_channel_flipback_predictions[new_label, :, :] = org_channel
-            spatial_channel_flipback_predictions[ori_label, :, :] = new_channel
+            channel_flipback_predictions[new_label, :, :] = org_channel
+            channel_flipback_predictions[ori_label, :, :] = new_channel
 
-        return spatial_channel_flipback_predictions
+        return channel_flipback_predictions
 
     def flip_instance_back(self, predictions, instance_type='part'):
         for prediction in predictions:
@@ -324,21 +325,20 @@ class SemanticSegmentorWithTTA(nn.Module):
         self.cfg = cfg.clone()
         self.model = model
 
+        if cfg.DATASETS.TEST[0].split('_')[0] in HUMAN_PARSING_DATASETS:
+            self.human_semseg = True
+            self.flip_map = MetadataCatalog.get(cfg.DATASETS.TEST[0]).flip_map
+        else:
+            self.human_semseg = False
+
         if tta_mapper is None:
-            if "lip" in cfg.DATASETS.TEST[0]:
+            if cfg.INPUT.SINGLE_HUMAN.ENABLED:
                 tta_mapper = SingleHumanDatasetMapperTTA(cfg)
             else:
                 tta_mapper = DatasetMapperTTA(cfg)
 
         self.tta_mapper = tta_mapper
         self.batch_size = batch_size
-
-        self.human_semseg = False
-        for dataset_name in HUMAN_PARSING_DATASETS:
-            if dataset_name in cfg.DATASETS.TEST[0]:
-                self.human_semseg = True
-                self.flip_map = get_parsing_flip_map(cfg.DATASETS.TEST[0])
-                break
 
     def __call__(self, batched_inputs):
         """
@@ -376,10 +376,12 @@ class SemanticSegmentorWithTTA(nn.Module):
         count_predictions = 0
         for input, tfm in zip(augmented_inputs, tfms):
             count_predictions += 1
+
             with torch.no_grad():
                 if final_predictions is None:
                     if any(isinstance(t, HFlipTransform) for t in tfm.transforms):
                         predictions = self.model([input])[0].pop("sem_seg")
+
                         if self.human_semseg:
                             final_predictions = self.flip_human_semantic_back(predictions)
                         else:
@@ -389,6 +391,7 @@ class SemanticSegmentorWithTTA(nn.Module):
                 else:
                     if any(isinstance(t, HFlipTransform) for t in tfm.transforms):
                         predictions = self.model([input])[0].pop("sem_seg")
+
                         if self.human_semseg:
                             final_predictions += self.flip_human_semantic_back(predictions)
                         else:
@@ -406,14 +409,14 @@ class SemanticSegmentorWithTTA(nn.Module):
 
     def flip_human_semantic_back(self, predictions):
         spatial_flipback_predictions = predictions.flip(dims=[2])
-        spatial_channel_flipback_predictions = copy.deepcopy(spatial_flipback_predictions)
+        channel_flipback_predictions = copy.deepcopy(spatial_flipback_predictions)
 
         # channel transaction to flip human part label
         for ori_label, new_label in self.flip_map:
             org_channel = spatial_flipback_predictions[ori_label, :, :]
             new_channel = spatial_flipback_predictions[new_label, :, :]
 
-            spatial_channel_flipback_predictions[new_label, :, :] = org_channel
-            spatial_channel_flipback_predictions[ori_label, :, :] = new_channel
+            channel_flipback_predictions[new_label, :, :] = org_channel
+            channel_flipback_predictions[ori_label, :, :] = new_channel
 
-        return spatial_channel_flipback_predictions
+        return channel_flipback_predictions
