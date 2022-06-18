@@ -62,6 +62,7 @@ from mask2former import (
     ParsingWithTTA,
     ParsingEvaluator,
     build_detection_test_loader,
+    load_image_into_numpy_array,
 )
 
 
@@ -99,6 +100,7 @@ class Trainer(DefaultTrainer):
                     dataset_name,
                     distributed=True,
                     output_dir=output_folder,
+                    sem_seg_loading_fn=load_image_into_numpy_array
                 )
             )
         # instance segmentation

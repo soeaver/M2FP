@@ -44,3 +44,4 @@ from .test_time_augmentation import SemanticSegmentorWithTTA, ParsingWithTTA
 # evaluation
 from .evaluation.instance_evaluation import InstanceSegEvaluator
 from .evaluation.parsing_evaluation import ParsingEvaluator
+from .evaluation.utils import load_image_into_numpy_array

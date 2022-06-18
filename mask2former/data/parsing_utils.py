@@ -6,16 +6,7 @@ import pycocotools.mask as mask_util
 import torch
 from PIL import Image
 
-from detectron2.structures import (
-    BitMasks,
-    Boxes,
-    BoxMode,
-    Instances,
-    Keypoints,
-    PolygonMasks,
-    RotatedBoxes,
-    polygons_to_bitmask,
-)
+from detectron2.structures import BoxMode
 from detectron2.data import transforms as T
 from detectron2.data import MetadataCatalog
 from fvcore.transforms.transform import CropTransform
@@ -80,27 +71,7 @@ def flip_human_semantic_category(img, gt, flip_map, prob):
 
 
 def transform_parsing_instance_annotations(annotation, transforms, image_size, flip_map):
-    """
-    Apply transforms to box and segmentation of a single human part instance.
 
-    It will use `transforms.apply_box` for the box, and
-    `transforms.apply_coords` for segmentation polygons & keypoints.
-    If you need anything more specially designed for each data structure,
-    you'll need to implement your own version of this function or the transforms.
-
-    Args:
-        annotation (dict): dict of instance annotations for a single instance.
-            It will be modified in-place.
-        transforms (TransformList or list[Transform]):
-        image_size (tuple): the height, width of the transformed image
-        flip_map (tuple(int, int)): hflip label map.
-
-    Returns:
-        dict:
-            the same input dict with fields "bbox", "segmentation"
-            transformed according to `transforms`.
-            The "bbox_mode" field will be set to XYXY_ABS.
-    """
     if isinstance(transforms, (tuple, list)):
         transforms = T.TransformList(transforms)
     # bbox is 1d (per-instance bounding box)

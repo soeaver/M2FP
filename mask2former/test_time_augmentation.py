@@ -176,32 +176,32 @@ class ParsingWithTTA(nn.Module):
                         flipped_human_predictions = model_out['human_outputs']
                         flipped_parsing_predictions = model_out['parsing_outputs']
 
-                        parsing_predictions = self.flip_parsing_back(flipped_parsing_predictions) \
-                            if len(flipped_parsing_predictions) > 0 else []
+                        semantic_predictions = self.flip_semantic_back(flipped_semantic_predictions)
                         part_predictions = self.flip_instance_back(flipped_part_predictions)
                         human_predictions = self.flip_instance_back(flipped_human_predictions, 'human') \
                             if len(flipped_human_predictions) > 0 else []
-                        final_semantic_predictions = self.flip_semantic_back(flipped_semantic_predictions)
+                        parsing_predictions = self.flip_parsing_back(flipped_parsing_predictions) \
+                            if len(flipped_parsing_predictions) > 0 else []
                     else:
-                        final_semantic_predictions = model_out['semseg_outputs']
+                        semantic_predictions = model_out['semseg_outputs']
                         part_predictions = model_out['part_outputs']
                         human_predictions = model_out['human_outputs']
                         parsing_predictions = model_out['parsing_outputs']
                 else:
                     if any(isinstance(t, HFlipTransform) for t in tfm.transforms):
-                        flipped_predictions = model_out['semseg_outputs']
+                        flipped_semantic_predictions = model_out['semseg_outputs']
                         flipped_part_predictions = model_out['part_outputs']
                         flipped_human_predictions = model_out['human_outputs']
                         flipped_parsing_predictions = model_out['parsing_outputs']
 
-                        parsing_predictions = self.flip_parsing_back(flipped_parsing_predictions) \
-                            if len(flipped_parsing_predictions) > 0 else []
+                        semantic_predictions += self.flip_semantic_back(flipped_semantic_predictions)
                         part_predictions = self.flip_instance_back(flipped_part_predictions)
                         human_predictions = self.flip_instance_back(flipped_human_predictions, 'human') \
                             if len(flipped_human_predictions) > 0 else []
-                        final_semantic_predictions += self.flip_semantic_back(flipped_predictions)
+                        parsing_predictions = self.flip_parsing_back(flipped_parsing_predictions) \
+                            if len(flipped_parsing_predictions) > 0 else []
                     else:
-                        final_semantic_predictions += model_out['semseg_outputs']
+                        semantic_predictions += model_out['semseg_outputs']
                         part_predictions = model_out['part_outputs']
                         human_predictions = model_out['human_outputs']
                         parsing_predictions = model_out['parsing_outputs']
@@ -227,7 +227,7 @@ class ParsingWithTTA(nn.Module):
                     parsing_instance_scores.append(parsing_prediction['instance_score'])
 
         # merge predictions from different augmentations
-        final_semantic_predictions = final_semantic_predictions.cpu() / count_predictions
+        final_semantic_predictions = semantic_predictions.cpu() / count_predictions
         if self.merge_mode == "supress":
             final_part_predictions = predictions_supress(all_part_predictions)
             final_human_predictions = predictions_supress(all_human_predictions) \

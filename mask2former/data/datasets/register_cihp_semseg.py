@@ -31,7 +31,6 @@ CIHP_SEMSEG_CATEGORIES = [
     "Right-shoe"
 ]
 
-# ==== Predefined splits for raw CIHP images ===========
 _PREDEFINED_SPLITS = {
     "cihp_semseg_train": ("Training/Images/", "Training/Category_ids/"),
     "cihp_semseg_val": ("Validation/Images/", "Validation/Category_ids/"),
