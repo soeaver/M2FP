@@ -68,6 +68,7 @@ MHPv2_SEMSEG_CATEGORIES = [
     'Other-lower-body-clothes'
 ]
 
+# ==== Predefined splits for raw MHP-v2 images ===========
 _PREDEFINED_SPLITS = {
     "mhpv2_semseg_train": ("Training/Images/", "Training/Category_ids/"),
     "mhpv2_semseg_val": ("Validation/Images/", "Validation/Category_ids/"),

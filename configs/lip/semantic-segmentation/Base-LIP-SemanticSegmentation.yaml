@@ -34,15 +34,6 @@ SOLVER:
   AMP:
     ENABLED: True
 INPUT:
-  MIN_SIZE_TRAIN: (800,)
-  MIN_SIZE_TRAIN_SAMPLING: "choice"
-  MIN_SIZE_TEST: 512
-  CROP:
-    ENABLED: True
-    TYPE: "absolute"
-    SIZE: (512, 512)
-    SINGLE_CATEGORY_MAX_AREA: 1.0
-  COLOR_AUG_SSD: True
   FORMAT: "RGB"
   DATASET_MAPPER_NAME: "mask_former_semantic_hp"
   SINGLE_HUMAN:

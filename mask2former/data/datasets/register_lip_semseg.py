@@ -31,6 +31,7 @@ LIP_SEMSEG_CATEGORIES = [
     'Right-shoe'
 ]
 
+# ==== Predefined splits for raw LIP images ===========
 _PREDEFINED_SPLITS = {
     "lip_semseg_train": ("Training/Images/", "Training/Category_ids/"),
     "lip_semseg_val": ("Validation/Images/", "Validation/Category_ids/"),
