@@ -13,9 +13,8 @@ from detectron2.data import transforms as T
 from detectron2.projects.point_rend import ColorAugSSDTransform
 from detectron2.structures import BitMasks, Instances
 
-import random, cv2, os
-from PIL import Image
-from ..parsing_utils import flip_human_semantic_category, center_to_target_size_semantic, affine_to_target_size
+from ..parsing_utils import read_semseg_gt, flip_human_semantic_category, \
+    center_to_target_size_semantic, affine_to_target_size
 from ..transforms.augmentation_impl import ResizeByAspectRatio, ResizeByScale, RandomCenterRotation
 
 __all__ = ["MaskFormerSemanticHPDatasetMapper"]
@@ -143,7 +142,7 @@ class MaskFormerSemanticHPDatasetMapper:
 
         if "sem_seg_file_name" in dataset_dict:
             # PyTorch transformation not implemented for uint16, so converting it to double first
-            sem_seg_gt = utils.read_image(dataset_dict.pop("sem_seg_file_name")).astype("double")
+            sem_seg_gt = read_semseg_gt(dataset_dict.pop("sem_seg_file_name")).astype("double")
         else:
             sem_seg_gt = None
 

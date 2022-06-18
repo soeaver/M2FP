@@ -1,3 +1,5 @@
+import random
+import cv2
 import copy
 import logging
 import numpy as np
@@ -6,14 +8,17 @@ import pycocotools.mask as mask_util
 import torch
 from PIL import Image
 
+from fvcore.transforms.transform import CropTransform
 from detectron2.structures import BoxMode
 from detectron2.data import transforms as T
 from detectron2.data import MetadataCatalog
-from fvcore.transforms.transform import CropTransform
-import random, cv2, copy
+from detectron2.utils.file_io import PathManager
+from detectron2.data.detection_utils import _apply_exif_orientation
+
 from .transforms.transform import PadTransform
 
 __all__ = [
+    "read_semseg_gt",
     "filter_instance_by_attributes",
     "flip_human_semantic_category",
     "transform_parsing_instance_annotations",
@@ -22,6 +27,20 @@ __all__ = [
     "center_to_target_size_parsing",
     "center_to_target_size_test",
 ]
+
+
+def read_semseg_gt(file_name):
+    with PathManager.open(file_name, "rb") as f:
+        gt_pil = Image.open(f)
+        # work around this bug: https://github.com/python-pillow/Pillow/issues/3973
+        gt_pil = _apply_exif_orientation(gt_pil)
+
+        gt_array = np.asarray(gt_pil)
+        if len(gt_array.shape) == 3:
+            assert gt_array.shape[2] == 3
+            gt_array = gt_array.transpose(2, 0, 1)[0, :, :]
+
+        return gt_array
 
 
 def filter_instance_by_attributes(dataset_dicts, with_human_ins, with_bkg_ins):
