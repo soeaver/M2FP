@@ -1,4 +1,4 @@
-# Mask2Former: Masked-attention Mask Transformer for Universal Image Segmentation
+# M2FP: Mask2Former for Parsing
 
 [Bowen Cheng](https://bowenc0221.github.io/), [Ishan Misra](https://imisra.github.io/), [Alexander G. Schwing](https://alexander-schwing.de/), [Alexander Kirillov](https://alexander-kirillov.github.io/), [Rohit Girdhar](https://rohitgirdhar.github.io/)
 
@@ -9,8 +9,8 @@
 </div><br/>
 
 ### Features
-* A single architecture for panoptic, instance and semantic segmentation.
-* Support major segmentation datasets: ADE20K, Cityscapes, COCO, Mapillary Vistas.
+* A single architecture for single human parsing, multiple (instance-level) human parsing, video human parsing and face parsing.
+* Support several parsing datasets: LIP, ATR, PASCAL-Person-Part, CIHP, MHPv2, VIP, LaPa, CelebAMask-HQ.
 
 ## Updates
 * Add Google Colab demo.
@@ -22,15 +22,13 @@ See [installation instructions](INSTALL.md).
 
 ## Getting Started
 
-See [Preparing Datasets for Mask2Former](datasets/README.md).
+See [Preparing Datasets for M2FP](datasets/README.md).
 
-See [Getting Started with Mask2Former](GETTING_STARTED.md).
-
-Run our demo using Colab: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1uIWE5KbGFSjrxey2aRd5pWkKNY1_SaNq)
+See [Getting Started with M2FP](GETTING_STARTED.md).
 
 ## Advanced usage
 
-See [Advanced Usage of Mask2Former](ADVANCED_USAGE.md).
+See [Advanced Usage of M2FP](ADVANCED_USAGE.md).
 
 ## Model Zoo and Baselines
 
@@ -54,7 +52,18 @@ However portions of the project are available under separate license terms: Swin
 
 ## <a name="CitingMask2Former"></a>Citing Mask2Former
 
-If you use Mask2Former in your research or wish to refer to the baseline results published in the [Model Zoo](MODEL_ZOO.md), please use the following BibTeX entry.
+If you use M2FP in your research or wish to refer to the baseline results published in the [Model Zoo](MODEL_ZOO.md), please use the following BibTeX entry.
+
+```BibTeX
+@article{yang2022parsing,
+  title={Deep Learning Technique for Human Parsing: A Survey and Outlook},
+  author={Lu Yang and Hongjie Liu and Wenhe Jia and Qing Song},
+  journal={arXiv},
+  year={2022}
+}
+```
+
+If you find the code useful, please also consider the following BibTeX entry.
 
 ```BibTeX
 @article{cheng2021mask2former,
@@ -64,8 +73,6 @@ If you use Mask2Former in your research or wish to refer to the baseline results
   year={2021}
 }
 ```
-
-If you find the code useful, please also consider the following BibTeX entry.
 
 ```BibTeX
 @inproceedings{cheng2021maskformer,
