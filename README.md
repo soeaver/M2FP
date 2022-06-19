@@ -1,8 +1,8 @@
 # M2FP: Mask2Former for Parsing
 
-[Bowen Cheng](https://bowenc0221.github.io/), [Ishan Misra](https://imisra.github.io/), [Alexander G. Schwing](https://alexander-schwing.de/), [Alexander Kirillov](https://alexander-kirillov.github.io/), [Rohit Girdhar](https://rohitgirdhar.github.io/)
+Lu Yang, Hongjie Liu, Wenhe Jia, Qing Song
 
-[[`arXiv`](https://arxiv.org/abs/2112.01527)] [[`Project`](https://bowenc0221.github.io/mask2former)] [[`BibTeX`](#CitingMask2Former)]
+`arXiv`(need to be updated)
 
 <div align="center">
   <img src="https://bowenc0221.github.io/images/maskformerv2_teaser.png" width="100%" height="100%"/>
@@ -13,8 +13,7 @@
 * Support several parsing datasets: LIP, ATR, PASCAL-Person-Part, CIHP, MHPv2, VIP, LaPa, CelebAMask-HQ.
 
 ## Updates
-* Add Google Colab demo.
-* Video instance segmentation is now supported! Please check our [tech report](https://arxiv.org/abs/2112.10764) for more details.
+[2022/6/19] Code initialization.
 
 ## Installation
 
@@ -85,4 +84,4 @@ If you find the code useful, please also consider the following BibTeX entry.
 
 ## Acknowledgement
 
-Code is largely based on MaskFormer (https://github.com/facebookresearch/MaskFormer).
+Code is largely based on Mask2Former (https://github.com/facebookresearch/Mask2Former).
