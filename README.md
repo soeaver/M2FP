@@ -37,7 +37,7 @@ We provide a large set of baseline results and trained models available for down
 
 Shield: [![CC BY-NC 4.0][cc-by-nc-shield]][cc-by-nc]
 
-The majority of Mask2Former is licensed under a
+The majority of M2FP is licensed under a
 [Creative Commons Attribution-NonCommercial 4.0 International License](LICENSE).
 
 [![CC BY-NC 4.0][cc-by-nc-image]][cc-by-nc]
@@ -49,7 +49,7 @@ The majority of Mask2Former is licensed under a
 
 However portions of the project are available under separate license terms: Swin-Transformer-Semantic-Segmentation is licensed under the [MIT license](https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation/blob/main/LICENSE), Deformable-DETR is licensed under the [Apache-2.0 License](https://github.com/fundamentalvision/Deformable-DETR/blob/main/LICENSE).
 
-## <a name="CitingMask2Former"></a>Citing Mask2Former
+## <a name="CitingM2FP"></a>Citing M2FP
 
 If you use M2FP in your research or wish to refer to the baseline results published in the [Model Zoo](MODEL_ZOO.md), please use the following BibTeX entry.
 
@@ -65,10 +65,10 @@ If you use M2FP in your research or wish to refer to the baseline results publis
 If you find the code useful, please also consider the following BibTeX entry.
 
 ```BibTeX
-@article{cheng2021mask2former,
+@inproceedings{cheng2021mask2former,
   title={Masked-attention Mask Transformer for Universal Image Segmentation},
   author={Bowen Cheng and Ishan Misra and Alexander G. Schwing and Alexander Kirillov and Rohit Girdhar},
-  journal={arXiv},
+  journal={CVPR},
   year={2021}
 }
 ```
