@@ -1,6 +1,6 @@
 # M2FP: Mask2Former for Parsing
 
-Lu Yang, Hongjie Liu, Wenhe Jia, Qing Song
+By **Lu Yang**, **Hongjie Liu**, **Wenhe Jia**, **Qing Song**
 
 `arXiv`(need to be updated)
 
