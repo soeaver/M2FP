@@ -31,7 +31,7 @@ See [Advanced Usage of M2FP](ADVANCED_USAGE.md).
 
 ## Model Zoo and Baselines
 
-We provide a large set of baseline results and trained models available for download in the [Mask2Former Model Zoo](MODEL_ZOO.md).
+We provide a large set of baseline results and trained models available for download in the [M2FP Model Zoo](MODEL_ZOO.md).
 
 ## License
 
