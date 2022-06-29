@@ -4,6 +4,7 @@ import os
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.data.datasets.coco import load_coco_json
 
+
 LIP_PARSING_CATEGORIES = [
     {"id": 0, "name": "Background"},
     {"id": 1,  "name": "Hat"},
@@ -37,6 +38,7 @@ _PREDEFINED_SPLITS = {
     "lip_parsing_val": ("lip/Validation/Images/", "lip/annotations/LIP_parsing_val.json",),
 }
 
+
 def _get_lip_parsing_meta():
     thing_ids = [k["id"] for k in LIP_PARSING_CATEGORIES]
     assert len(thing_ids) == 21, len(thing_ids)
@@ -51,6 +53,7 @@ def _get_lip_parsing_meta():
     }
     return ret
 
+
 def register_lip_parsing(root):
     meta = _get_lip_parsing_meta()
     extra_keys = ["parsing_id", "area", "ispart", "isfg"]
@@ -58,7 +61,14 @@ def register_lip_parsing(root):
         image_root = os.path.join(root, image_root)
         json_file = os.path.join(root, json_file)
 
-        DatasetCatalog.register(name, lambda: load_coco_json(json_file, image_root, name, extra_keys))
+        DatasetCatalog.register(
+            name,
+            lambda json_file=json_file, image_root=image_root, name=name, extra_keys=extra_keys: load_coco_json(
+                json_file, image_root,
+                dataset_name=name,
+                extra_annotation_keys=extra_keys
+            )
+        )
         MetadataCatalog.get(name).set(
             json_file=json_file, image_root=image_root, evaluator_type="parsing", **meta
         )

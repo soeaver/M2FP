@@ -14,8 +14,8 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
 DATASETS:
-  TRAIN: ("mhpv2_instance_train",)
-  TEST: ("mhpv2_instance_val",)
+  TRAIN: ("mhpv2_parsing_train",)
+  TEST: ("mhpv2_parsing_val",)
 SOLVER:
   IMS_PER_BATCH: 16
   BASE_LR: 0.0001

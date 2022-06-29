@@ -4,17 +4,18 @@ import os
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.data.datasets.coco import load_coco_json
 
+
 CIHP_PARSING_CATEGORIES = [
     {"id": 0, "name": "Background"},
-    {"id": 1,  "name": "Hat"},
-    {"id": 2,  "name": "Hair"},
-    {"id": 3,  "name": "Gloves"},
-    {"id": 4,  "name": "Sunglasses"},
-    {"id": 5,  "name": "UpperClothes"},
-    {"id": 6,  "name": "Dress"},
-    {"id": 7,  "name": "Coat"},
-    {"id": 8,  "name": "Socks"},
-    {"id": 9,  "name": "Pants"},
+    {"id": 1, "name": "Hat"},
+    {"id": 2, "name": "Hair"},
+    {"id": 3, "name": "Gloves"},
+    {"id": 4, "name": "Sunglasses"},
+    {"id": 5, "name": "UpperClothes"},
+    {"id": 6, "name": "Dress"},
+    {"id": 7, "name": "Coat"},
+    {"id": 8, "name": "Socks"},
+    {"id": 9, "name": "Pants"},
     {"id": 10, "name": "Torso-skin"},
     {"id": 11, "name": "Scarf"},
     {"id": 12, "name": "Skirt"},
@@ -60,7 +61,14 @@ def register_cihp_parsing(root):
         image_root = os.path.join(root, image_root)
         json_file = os.path.join(root, json_file)
 
-        DatasetCatalog.register(name, lambda: load_coco_json(json_file, image_root, name, extra_keys))
+        DatasetCatalog.register(
+            name,
+            lambda json_file=json_file, image_root=image_root, name=name, extra_keys=extra_keys: load_coco_json(
+                json_file, image_root,
+                dataset_name=name,
+                extra_annotation_keys=extra_keys
+            )
+        )
         MetadataCatalog.get(name).set(
             json_file=json_file, image_root=image_root, evaluator_type="parsing", **meta
         )

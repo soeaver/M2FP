@@ -4,6 +4,7 @@ import os
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.data.datasets.coco import load_coco_json
 
+
 MHPv2_PARSING_CATEGORIES = [
     {"id": 0, "name": "Background"},
     {"id": 1, "name": "Cap/Hat"},
@@ -99,7 +100,14 @@ def register_mhpv2_parsing(root):
         image_root = os.path.join(root, image_root)
         json_file = os.path.join(root, json_file)
 
-        DatasetCatalog.register(name, lambda: load_coco_json(json_file, image_root, name, extra_keys))
+        DatasetCatalog.register(
+            name,
+            lambda json_file=json_file, image_root=image_root, name=name, extra_keys=extra_keys: load_coco_json(
+                json_file, image_root,
+                dataset_name=name,
+                extra_annotation_keys=extra_keys
+            )
+        )
         MetadataCatalog.get(name).set(
             json_file=json_file, image_root=image_root, evaluator_type="parsing", **meta
         )
