@@ -13,7 +13,6 @@ from tqdm import tqdm, trange
 import pycocotools.mask as mask_utils
 
 from .semseg_eval import SemSegEvaluator
-from .utils import get_parsing
 
 warnings.filterwarnings("ignore")
 
@@ -27,11 +26,11 @@ class ParsingEval(object):
             self,
             parsingGt=None,
             parsingPred=None,
-            gt_dir=None,
+            metadata=None,
             pred_dir=None,
             score_thresh=0.001,
-            num_parsing=20,
-            metrics=('mIoU', 'APp', 'APr')
+            metrics=('mIoU', 'APp', 'APr'),
+            log_class_APr=False
     ):
 
         """
@@ -40,31 +39,32 @@ class ParsingEval(object):
         :param parsingPred:
         :return: None
         """
-        self.parsingGt = parsingGt
-
+        self.parsingGt = parsingGt  # CocoDetection
         self.parsingPred = parsingPred
-        self.partPred = None
-        self.humanPred = None
+        self.score_thresh = score_thresh
+        self.metrics = metrics
 
-        self.params = {}  # evaluation parameters
-        self.params = Params(iouType='iou')  # parameters
+        self.pred_dir = pred_dir
+        self.semantic_gt_dir = metadata.semantic_gt_root
+        self.part_gt_dir = metadata.part_gt_root
+        self.human_gt_dir = metadata.human_gt_root
+        self.num_parsing = metadata.num_parsing
+
+        self.params = {}
+        self.params = Params(iouType='iou')  # evaluation parameters
         self.par_thresholds = self.params.pariouThrs
         self.mask_thresholds = self.params.maskiouThrs
-        self.gt_dir = gt_dir
-        self.pred_dir = pred_dir
-        self.score_thresh = score_thresh
-        self.num_parsing = num_parsing
-        self.metrics = metrics  # ('mIoU , APp , APr')
+
+        self.log_class_APr = log_class_APr
+
         self.stats = dict()  # result summarization
         self._logger = logging.getLogger(__name__)
 
         if 'mIoU' in self.metrics or 'miou' in self.metrics:
-            # self.global_parsing_dir = os.path.join(self.pred_dir, 'global_parsing')
-            # assert os.path.exists(self.global_parsing_dir)
+            assert os.path.exists(self.semantic_gt_dir)
             self._logger.info('The Global Parsing Images: {}'.format(len(parsingGt)))
             self.semseg_eval = SemSegEvaluator(
-                parsingGt, self.pred_dir, self.gt_dir, self.num_parsing,
-                gt_dir=self.gt_dir.replace('Images', 'Category_ids')
+                parsingGt, metadata, self.pred_dir, self.num_parsing
             )
             self.semseg_eval.evaluate()
             self.semseg_eval.accumulate()
@@ -83,8 +83,10 @@ class ParsingEval(object):
             objs = self.parsingGt.coco.loadAnns(ann_ids)
             # gt_box = []
             parsing_ids = [obj["parsing_id"] for obj in objs if obj['category_id'] == self.num_parsing]
+
             anno_adds = get_parsing(
-                self.parsingGt.root, self.parsingGt.coco.loadImgs(image_id)[0]['file_name'], parsing_ids
+                self.human_gt_dir, self.semantic_gt_dir,
+                self.parsingGt.coco.loadImgs(image_id)[0]['file_name'], parsing_ids
             )
             npos = npos + len(anno_adds)
             det = [False] * len(anno_adds)
@@ -417,7 +419,7 @@ class ParsingEval(object):
 
     def computeAPr(self):
         self._logger.info('Evaluating AP^r')
-        instance_par_gt_dir = self.gt_dir.replace('Images', 'Instance_ids')
+        instance_par_gt_dir = self.part_gt_dir
         assert os.path.exists(instance_par_gt_dir)
 
         tmp_instance_par_gt_dir = instance_par_gt_dir
@@ -443,7 +445,7 @@ class ParsingEval(object):
 
     def computeAPh(self):
         self._logger.info('Evaluating AP^h')
-        instance_seg_gt_dir = self.gt_dir.replace('Images', 'Human_ids')
+        instance_seg_gt_dir = self.human_gt_dir
         assert os.path.exists(instance_seg_gt_dir)
 
         iou_thre_num = len(self.mask_thresholds)
@@ -564,13 +566,16 @@ class ParsingEval(object):
         if 'APr' in self.metrics or 'ap^r' in self.metrics:
             APr = self.stats['APr']
             mAPr = np.nanmean(np.array(list(APr.values())))
-            APr_cat = self.stats['APr_cat']
-            self._logger.info('~~~~ Summary metrics (per category)~~~~')
-            for cat_id, apr_c in enumerate(APr_cat):
-                self._logger.info(
-                    ' Average Precision based on region (APr)' + 'Class ' +
-                    str(cat_id + 1) + '         @[mIoU=0.10:0.90 ] = {:.3f}'.format(apr_c)
-                )
+
+            if self.log_class_APr:
+                self._logger.info('~~~~ Summary metrics (per category)~~~~')
+                APr_cat = self.stats['APr_cat']
+                for cat_id, apr_c in enumerate(APr_cat):
+                    self._logger.info(
+                        ' Average Precision based on region (APr)' + 'Class ' +
+                        str(cat_id + 1) + '         @[mIoU=0.10:0.90 ] = {:.3f}'.format(apr_c)
+                    )
+                    
             self._logger.info('=' * 80)
             self._logger.info('~~~~ Summary metrics ~~~~')
             self._logger.info(
@@ -622,165 +627,13 @@ class Params:
         self.iouType = iouType
 
 
-def generate_parsing_result(parsings, instance_scores, part_scores, bbox_scores=None, semseg=None, img_info=None,
-                            output_folder=None, score_thresh=0.05, semseg_thresh=0.3, parsing_nms_thres=1.0,
-                            num_parsing=20):
-    parsings = np.asarray(parsings)
-    instance_scores = np.asarray(instance_scores)
-    part_scores = np.asarray(part_scores)
-    bbox_scores = np.asarray(bbox_scores) if bbox_scores is not None else instance_scores
-    global_parsing_dir = os.path.join(output_folder, 'global_parsing')
-    if not os.path.exists(global_parsing_dir):
-        os.makedirs(global_parsing_dir)
-    ins_semseg_dir = os.path.join(output_folder, 'instance_segmentation')
-    if not os.path.exists(ins_semseg_dir):
-        os.makedirs(ins_semseg_dir)
-    ins_parsing_dir = os.path.join(output_folder, 'instance_parsing')
-    if not os.path.exists(ins_parsing_dir):
-        os.makedirs(ins_parsing_dir)
-
-    im_name = img_info['file_name']
-    if '/' in im_name:
-        folders = im_name.split('/')[:-1]
-        cur_global_parsing_dir = global_parsing_dir
-        cur_ins_semseg_dir = ins_semseg_dir
-        cur_ins_parsing_dir = ins_parsing_dir
-        for f_name in folders:
-            os.mkdir(os.path.join(cur_global_parsing_dir, f_name)) \
-                if not os.path.exists(os.path.join(cur_global_parsing_dir, f_name)) else None
-            os.mkdir(os.path.join(cur_ins_semseg_dir, f_name)) \
-                if not os.path.exists(os.path.join(cur_ins_semseg_dir, f_name)) else None
-            os.mkdir(os.path.join(cur_ins_parsing_dir, f_name)) \
-                if not os.path.exists(os.path.join(cur_ins_parsing_dir, f_name)) else None
-            cur_global_parsing_dir = cur_global_parsing_dir + '/' + f_name
-            cur_ins_semseg_dir = cur_ins_semseg_dir + '/' + f_name
-            cur_ins_parsing_dir = cur_ins_parsing_dir + '/' + f_name
-    save_global_parsing = os.path.join(global_parsing_dir, im_name.replace('jpg', 'png'))
-    save_ins_semseg = os.path.join(ins_semseg_dir, im_name.replace('jpg', 'png'))
-    save_ins_parsing = os.path.join(ins_parsing_dir, im_name.replace('jpg', 'png'))
-
-    if semseg is not None:
-        semseg = cv2.resize(semseg, (img_info["width"], img_info["height"]), interpolation=cv2.INTER_LINEAR)
-        parsing_max = np.max(semseg, axis=2)
-        max_map = np.where(parsing_max > 0.7, 1, 0)
-        global_parsing = np.argmax(semseg, axis=2).astype(np.uint8) * max_map
-    else:
-        global_parsing = np.zeros((img_info["height"], img_info["width"]), dtype=np.uint8)
-    global_for_ins = np.copy(global_parsing)
-    ins_semseg = np.zeros_like(global_parsing, dtype=np.uint8)
-    ins_parsing = np.zeros_like(global_parsing, dtype=np.uint8)
-    is_wfp = open(save_ins_semseg.replace('png', 'txt'), 'w')
-    ip_wfp = open(save_ins_parsing.replace('png', 'txt'), 'w')
-
-    # generate global_parsing, which is semseg
-    sorted_bbox_scores_ids = bbox_scores.argsort()
-    for s_id in sorted_bbox_scores_ids:
-        if bbox_scores[s_id] < semseg_thresh:
-            continue
-        cur_parsing = parsings[s_id]  # single person parsing label map
-        global_parsing = np.where(cur_parsing > 0, cur_parsing,
-                                  global_parsing)  # get part semseg label map for single image
-
-    # parsing nms
-    if parsing_nms_thres < 1.0:
-        parsings, instance_scores, part_scores = parsing_nms(
-            parsings, instance_scores, part_scores, parsing_nms_thres, num_parsing
-        )
-
-    # generate ins_semseg and global_for_ins
-    sorted_score_ids = instance_scores.argsort()
-    ins_id = 1
-    filtered_part_scores = dict()
-    det_bboxes = []
-    for s_id in sorted_score_ids:
-        if instance_scores[s_id] < score_thresh:
-            continue
-        cur_parsing = parsings[s_id]  # single person parsing label map
-        global_for_ins = np.where(cur_parsing > 0, cur_parsing,
-                                  global_for_ins)  # get semseg label map for single image at image scene
-        ins_semseg = np.where(cur_parsing > 0, ins_id, ins_semseg)  # get person instance map
-        cur_bbox = cv2.boundingRect(cur_parsing.copy())
-        x, y, w, h = cur_bbox
-        filtered_part_scores[ins_id] = [p for p in part_scores[s_id]]
-        det_bboxes.append([instance_scores[s_id], y, x, y + h, x + w])  # for VIP format
-        ins_id += 1
-
-    # generate ins_parsing
-    ins_ids = np.unique(ins_semseg)
-    bg_id_index = np.where(ins_ids == 0)[0]
-    ins_ids = np.delete(ins_ids, bg_id_index)
-    total_part_num = 0
-    for idx in ins_ids:
-        part_label = (np.where(ins_semseg == idx, 1, 0) * global_for_ins).astype(
-            np.uint8)  # get single person parsing map at image scene
-        part_classes = np.unique(part_label)
-        for part_id in part_classes:
-            if part_id == 0:
-                continue
-            total_part_num += 1
-            if total_part_num >= 255:
-                ins_parsing[np.where(part_label == part_id)] = 0
-            else:
-                ins_parsing[np.where(part_label == part_id)] = total_part_num
-                ip_wfp.write('{} {}\n'.format(part_id, filtered_part_scores[idx][part_id - 1]))
-
-    reindex_ins_semseg = np.zeros_like(ins_semseg, dtype=np.uint8)
-    re_ins_id = 1
-    for idx in ins_ids:
-        reindex_ins_semseg = np.where(ins_semseg == idx, re_ins_id, reindex_ins_semseg)
-        is_wfp.write('{} {} {} {} {}\n'.format(
-            det_bboxes[idx - 1][0], det_bboxes[idx - 1][1], det_bboxes[idx - 1][2], det_bboxes[idx - 1][3],
-            det_bboxes[idx - 1][4])
-        )
-        re_ins_id += 1
-
-    cv2.imwrite(save_global_parsing, global_parsing.astype(np.uint8))  # mIoU
-    cv2.imwrite(save_ins_semseg, reindex_ins_semseg.astype(np.uint8))  # APh
-    cv2.imwrite(save_ins_parsing, ins_parsing.astype(np.uint8))  # APr
-    is_wfp.close()
-    ip_wfp.close()
-
-    return parsings, instance_scores
-
-
-def parsing_nms(parsings, instance_scores, part_scores=None, nms_thresh=0.6, num_parsing=20):
-    def fast_hist(a, b, n):
-        k = (a >= 0) & (a < n)
-        return np.bincount(n * a[k].astype(int) + b[k], minlength=n ** 2).reshape(n, n)
-
-    def cal_one_mean_iou(image_array, label_array, _num_parsing):
-        hist = fast_hist(label_array, image_array, _num_parsing).astype(np.float)
-        num_cor_pix = np.diag(hist)
-        num_gt_pix = hist.sum(1)
-        union = num_gt_pix + hist.sum(0) - num_cor_pix
-        iu = num_cor_pix / union
-        return iu
-
-    def parsing_iou(src, dsts, num_classes=20):
-        ious = []
-        for d in range(dsts.shape[0]):
-            iou = cal_one_mean_iou(src, dsts[d], num_classes)
-            ious.append(np.nanmean(iou))
-        return ious
-
-    sorted_ids = (-instance_scores).argsort()
-    sorted_parsings = parsings[sorted_ids]
-    sorted_instance_scores = instance_scores[sorted_ids]
-    if part_scores is not None:
-        sorted_part_scores = part_scores[sorted_ids]
-    else:
-        raise NotImplementedError
-    keepped = [True] * sorted_instance_scores.shape[0]
-    for i in range(sorted_instance_scores.shape[0] - 1):
-        if not keepped[i]:
-            continue
-        ious = parsing_iou(sorted_parsings[i], (sorted_parsings[i + 1:])[keepped[i + 1:]], num_parsing)
-        for idx, iou in enumerate(ious):
-            if iou >= nms_thresh:
-                keepped[i + 1 + idx] = False
-    parsings = sorted_parsings[keepped]
-    instance_scores = sorted_instance_scores[keepped]
-    if part_scores is not None:
-        part_scores = sorted_part_scores[keepped]
-
-    return parsings, instance_scores, part_scores
+def get_parsing(human_dir, category_dir, file_name, parsing_ids):
+    file_name = file_name.replace('jpg', 'png')
+    human_path = os.path.join(human_dir, file_name)
+    category_path = os.path.join(category_dir, file_name)
+    human_mask = cv2.imread(human_path, 0)
+    category_mask = cv2.imread(category_path, 0)
+    parsing = []
+    for id in parsing_ids:
+        parsing.append(category_mask * (human_mask == id))
+    return parsing
