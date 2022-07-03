@@ -73,8 +73,20 @@ MHPv2_FLIP_MAP = ((5, 6), (7, 8), (22, 23), (24, 25), (26, 27), (28, 29), (30, 3
 
 
 _PREDEFINED_SPLITS = {
-    "mhpv2_parsing_train": ("mhpv2/Training/Images/", "mhpv2/annotations/MHP-v2_parsing_train.json",),
-    "mhpv2_parsing_val": ("mhpv2/Validation/Images/", "mhpv2/annotations/MHP-v2_parsing_val.json",),
+    "mhpv2_parsing_train": (
+        "mhpv2/annotations/MHP-v2_parsing_train.json",
+        "mhpv2/Training/Images/",
+        "mhpv2/Training/Category_ids/",
+        "mhpv2/Training/Instance_ids/",
+        "mhpv2/Training/Human_ids/",
+    ),
+    "mhpv2_parsing_val": (
+        "mhpv2/annotations/MHP-v2_parsing_val.json",
+        "mhpv2/Validation/Images/",
+        "mhpv2/Validation/Category_ids/",
+        "mhpv2/Validation/Instance_ids/",
+        "mhpv2/Validation/Human_ids/",
+    ),
 }
 
 
@@ -88,7 +100,13 @@ def _get_mhpv2_parsing_meta():
         "thing_dataset_id_to_contiguous_id": thing_dataset_id_to_contiguous_id,
         "thing_classes": thing_classes,
         "flip_map": MHPv2_FLIP_MAP,
-        "num_parsing": 59
+        "num_parsing": 59,
+        "semseg": {
+            "semseg_format": "mask",
+            "ignore_label": 255,
+            'label_shift': 0,
+            "name_trans": ('jpg', 'png'),
+        },
     }
     return ret
 
@@ -96,9 +114,12 @@ def _get_mhpv2_parsing_meta():
 def register_mhpv2_parsing(root):
     meta = _get_mhpv2_parsing_meta()
     extra_keys = ["parsing_id", "area", "ispart", "isfg"]
-    for name, (image_root, json_file) in _PREDEFINED_SPLITS.items():
-        image_root = os.path.join(root, image_root)
+    for name, (json_file, image_root, semantic_gt_root, part_gt_root, human_gt_root) in _PREDEFINED_SPLITS.items():
         json_file = os.path.join(root, json_file)
+        image_root = os.path.join(root, image_root)
+        semantic_gt_root = os.path.join(root, semantic_gt_root)
+        part_gt_root = os.path.join(root, part_gt_root)
+        human_gt_root = os.path.join(root, human_gt_root)
 
         DatasetCatalog.register(
             name,
@@ -109,9 +130,14 @@ def register_mhpv2_parsing(root):
             )
         )
         MetadataCatalog.get(name).set(
-            json_file=json_file, image_root=image_root, evaluator_type="parsing", **meta
+            json_file=json_file,
+            image_root=image_root,
+            semantic_gt_root=semantic_gt_root,
+            part_gt_root=part_gt_root,
+            human_gt_root=human_gt_root,
+            evaluator_type="parsing",
+            **meta
         )
-
 
 _root = os.getenv("DETECTRON2_DATASETS", "datasets")
 register_mhpv2_parsing(_root)
