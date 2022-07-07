@@ -9,6 +9,10 @@ MODEL:
     OUT_FEATURES: ["res2", "res3", "res4", "res5"]
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
+  MASK_FORMER:
+    TEST:
+      PARSING:
+        METRICS: ("mIoU", "APr")
 SOLVER:
   IMS_PER_BATCH: 8  # 16
   BASE_LR: 0.0004 # 0.0001, normalized zoom to 0.00005 with batch_size 8

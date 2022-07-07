@@ -1,6 +1,6 @@
-_BASE_: maskformer2_R50_bs128_150ep.yaml
+_BASE_: maskformer2_R50b_bs64_60k.yaml
 MODEL:
-  WEIGHTS: "R-101.pkl"
+  WEIGHTS: "./weights/R-101b.pkl"
   RESNETS:
     DEPTH: 101
     STEM_TYPE: "basic"  # not used

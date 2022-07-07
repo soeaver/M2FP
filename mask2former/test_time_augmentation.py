@@ -123,7 +123,7 @@ class ParsingWithTTA(nn.Module):
         self.tta_mapper = tta_mapper
         self.batch_size = batch_size
 
-        self.num_parsing = MetadataCatalog.get(self.cfg.DATASETS.TEST[0]).num_parisng
+        self.num_parsing = MetadataCatalog.get(self.cfg.DATASETS.TEST[0]).num_parsing
 
     def __call__(self, batched_inputs):
         """
