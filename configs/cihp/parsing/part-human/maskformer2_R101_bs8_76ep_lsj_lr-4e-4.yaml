@@ -1,10 +1,12 @@
-_BASE_: maskformer2_R50_bs8_76ep.yaml
+_BASE_: maskformer2_R50b_bs8_76ep.yaml
 MODEL:
-  WEIGHTS: "./weights/R-101.pkl"
+  WEIGHTS: "./weights/R-103.pkl"
+  BACKBONE:
+    NAME: "build_resnet_deeplab_backbone"
   RESNETS:
     DEPTH: 101
-    STEM_TYPE: "basic"  # not used
-    STEM_OUT_CHANNELS: 64
+    STEM_TYPE: "deeplab"
+    STEM_OUT_CHANNELS: 128
     STRIDE_IN_1X1: False
     OUT_FEATURES: ["res2", "res3", "res4", "res5"]
     # NORM: "SyncBN"
@@ -15,14 +17,14 @@ SOLVER:
   STEPS: (210000, 250000)  # (105000, 125000)
   MAX_ITER: 270000  # 135000  # 1.5x for coco_2017_train
 INPUT:
-  IMAGE_SIZE: 640
+  IMAGE_SIZE: 800
   MIN_SCALE: 0.1
   MAX_SCALE: 2.0
   FORMAT: "RGB"
   DATASET_MAPPER_NAME: "mask_former_parsing_lsj"
   MIN_SIZE_TEST: 800
 TEST:
-  EVAL_PERIOD: 30000
+  EVAL_PERIOD: 10000
   AUG:
     ENABLED: False
     MIN_SIZES: (800,)

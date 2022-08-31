@@ -14,12 +14,12 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
 DATASETS:
-  TRAIN: ("cihp_semseg_train",)
-  TEST: ("cihp_semseg_val",)
+  TRAIN: ("pascal_person_part_semseg_train",)
+  TEST: ("pascal_person_part_semseg_test",)
 SOLVER:
   IMS_PER_BATCH: 16
   BASE_LR: 0.0001
-  MAX_ITER: 210000  # ~120 epcoch
+  MAX_ITER: 13000  # ~120 epcoch
   WARMUP_FACTOR: 1.0
   WARMUP_ITERS: 0
   WEIGHT_DECAY: 0.05
@@ -49,7 +49,7 @@ INPUT:
   FORMAT: "RGB"
   DATASET_MAPPER_NAME: "mask_former_semantic_hp"
 TEST:
-  EVAL_PERIOD: 10000
+  EVAL_PERIOD: 1000
   AUG:
     ENABLED: False
     MIN_SIZES: [256, 384, 512, 640, 768, 896]

@@ -159,8 +159,6 @@ class MaskFormerParsingDatasetMapper:
         if self.single_human_aug:
             image, annos = center_to_target_size_parsing(image, annos, self.train_size)
 
-        if len(annos):
-            assert "segmentation" in annos[0]
         segms = [obj["segmentation"] for obj in annos]
         masks = []
         for segm in segms:

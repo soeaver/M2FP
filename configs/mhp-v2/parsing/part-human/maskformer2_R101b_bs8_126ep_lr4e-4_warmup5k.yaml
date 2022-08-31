@@ -1,0 +1,27 @@
+_BASE_: maskformer2_R50b_bs8_76ep.yaml
+MODEL:
+  WEIGHTS: "./weights/R-101b.pkl"
+  RESNETS:
+    DEPTH: 101
+    STEM_TYPE: "basic"  # not used
+    STEM_OUT_CHANNELS: 64
+    STRIDE_IN_1X1: False
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+    # NORM: "SyncBN"
+    RES5_MULTI_GRID: [1, 1, 1]  # not used
+SOLVER:
+  IMS_PER_BATCH: 8
+  BASE_LR: 0.0004
+  STEPS: (188687, 224627)
+  MAX_ITER: 242597  # 126 epoch
+  WARMUP_FACTOR: 0.0002
+  WARMUP_ITERS: 5000
+INPUT:
+  MIN_SIZE_TEST: 800
+TEST:
+  EVAL_PERIOD: 30000
+  AUG:
+    ENABLED: False
+    MIN_SIZES: (800,)
+    MAX_SIZE: 1400
+    FLIP: True

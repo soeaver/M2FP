@@ -184,7 +184,7 @@ class MaskFormerParsingLSJDatasetMapper:
             # USER: Implement additional transformations if you have other types of data
             annos = [
                 transform_parsing_instance_annotations(
-                    obj, transforms, image_shape, parsing_flip_map=self.parsing_flip_map,
+                    obj, transforms, image_shape, self.flip_map,
                 )
                 for obj in dataset_dict.pop("annotations")
                 if obj.get("iscrowd", 0) == 0
