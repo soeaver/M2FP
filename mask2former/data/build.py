@@ -293,7 +293,7 @@ def _test_loader_from_config(cfg, dataset_name, mapper=None):
     )
     
     if mapper is None:
-        if "lip" in cfg.DATASETS.TEST[0]:
+        if "lip" in cfg.DATASETS.TEST[0] or "atr" in cfg.DATASETS.TEST[0]:
             mapper = MaskFormerSingleHumanTestDatasetMapper(cfg, False)
         else:
             mapper = DatasetMapper(cfg, False)

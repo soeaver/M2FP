@@ -115,9 +115,6 @@ class MaskFormer(nn.Module):
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
 
-        if self.with_human_instance and self.with_bkg_instance:
-            raise NotImplementedError("Parsing with part, human and bkg simultaneously not implemented !!!")
-
     @classmethod
     def from_config(cls, cfg):
         backbone = build_backbone(cfg)
@@ -447,181 +444,140 @@ class MaskFormer(nn.Module):
         pred_labels = labels_per_image
         pred_masks = mask_pred
 
+        # prepare outputs
+        part_instance_res = []
+        human_instance_res = []
+        human_parsing_res = []
+
+        # extract bkg and part instances
         if not self.with_human_instance:
-            semantic_r, part_instance_r = self.instance_parsing_inference_without_human(
-                pred_labels, pred_scores, pred_masks
-            )
-            return {
-                "semseg_outputs": semantic_r,
-                "parsing_outputs": [],
-                "part_outputs": part_instance_r,
-                "human_outputs": []
-            }
+            bkg_part_labels = pred_labels
+            bkg_part_scores = pred_scores
+            bkg_part_masks = pred_masks
         else:
-            semantic_r, part_instance_r, human_instance_r, human_parsing_r = \
-                self.instance_parsing_inference_with_human(pred_labels, pred_scores, pred_masks)
-            return {
-                "semseg_outputs": semantic_r,
-                "part_outputs": part_instance_r,
-                "human_outputs": human_instance_r,
-                "parsing_outputs": human_parsing_r
-            }
+            bkg_part_index = torch.where(pred_labels != self.metadata.num_parsing)[0]
+            bkg_part_labels = pred_labels[bkg_part_index]
+            bkg_part_scores = pred_scores[bkg_part_index]
+            bkg_part_masks = pred_masks[bkg_part_index, :, :]
 
-    def instance_parsing_inference_without_human(self, pred_labels, pred_scores, pred_masks):
-        part_instance_res = []
+        # semantic result
+        semantic_res = self.paste_instance_to_semseg_probs(bkg_part_labels, bkg_part_scores, bkg_part_masks)
 
-        if self.with_bkg_instance:
-            semantic_res = self.paste_instance_to_semseg_probs_withbkg(pred_labels, pred_scores, pred_masks)
-            for idx in range(pred_labels.shape[0]):
-                if pred_labels[idx] == 0 or pred_scores[idx] < 0.1:
-                    continue
-                part_instance_res.append(
-                    {
-                        "category_id": pred_labels[idx].cpu().tolist(),
-                        "score": pred_scores[idx].cpu().tolist(),
-                        "mask": pred_masks[idx].cpu(),
-                    }
-                )
-        else:
-            pred_labels += 1  # convert train_id of part instances to category_id in dataset
-            semantic_res = self.paste_instance_to_semseg_probs(pred_labels, pred_scores, pred_masks)
+        # part instances
+        part_index = torch.where(bkg_part_labels != 0)[0]
+        part_labels = bkg_part_labels[part_index]
+        part_scores = bkg_part_scores[part_index]
+        part_masks = bkg_part_masks[part_index, :, :]
 
-            for idx in range(pred_labels.shape[0]):
-                if pred_scores[idx] < 0.1:
-                    continue
-                part_instance_res.append(
-                    {
-                        "category_id": pred_labels[idx].cpu().tolist(),
-                        "score": pred_scores[idx].cpu().tolist(),
-                        "mask": pred_masks[idx].cpu(),
-                    }
-                )
-
-        return semantic_res, part_instance_res
-
-    def instance_parsing_inference_with_human(self, pred_labels, pred_scores, pred_masks):
-        assert not self.with_bkg_instance, "inference with part, human and bkg simultaneously not implemented !!!"
-
-        human_label = 0
-
-        # get human and part instances
-        human_labels = pred_labels[torch.where(pred_labels == human_label)[0]]
-        human_scores = pred_scores[torch.where(pred_labels == human_label)[0]]
-        human_masks = pred_masks[torch.where(pred_labels == human_label)[0], :, :]
-
-        part_labels = pred_labels[torch.where(pred_labels != human_label)[0]]
-        part_scores = pred_scores[torch.where(pred_labels != human_label)[0]]
-        part_masks = pred_masks[torch.where(pred_labels != human_label)[0], :, :]
-
-        semantic_res = self.paste_instance_to_semseg_probs(part_labels, part_scores, part_masks)
-
-        part_instance_res = []
-        for part_idx in range(part_labels.shape[0]):
-            if part_scores[part_idx] < 0.1:
+        # part instance results
+        for idx in range(part_labels.shape[0]):
+            if part_scores[idx] < 0.1:
                 continue
             part_instance_res.append(
                 {
-                    "category_id": part_labels[part_idx].cpu().tolist(),
-                    "score": part_scores[part_idx].cpu().tolist(),
-                    "mask": part_masks[part_idx].cpu(),
+                    "category_id": part_labels[idx].cpu().tolist(),
+                    "score": part_scores[idx].cpu().tolist(),
+                    "mask": part_masks[idx].cpu(),
                 }
             )
 
-        human_instance_res = []
-        for human_idx in range(human_scores.shape[0]):
-            human_instance_res.append(
-                {
-                    "category_id": human_labels[human_idx].cpu().tolist(),
-                    "score": human_scores[human_idx].cpu().tolist(),
-                    "mask": human_masks[human_idx].cpu(),
-                }
-            )
+        if self.with_human_instance:
+            # human instances
+            human_index = torch.where(pred_labels == self.metadata.num_parsing)[0]
+            human_labels = pred_labels[human_index]
+            human_scores = pred_scores[human_index]
+            human_masks = pred_masks[human_index, :, :]
 
-        iop_mtrx = torch.zeros((human_scores.shape[0], part_scores.shape[0]), dtype=torch.float32)
-        matching_mtrx = torch.zeros((human_scores.shape[0], part_scores.shape[0]), dtype=torch.uint8)
-        human_ids = torch.arange(human_masks.shape[0])
-        part_ids = torch.arange(part_masks.shape[0])
+            # human instance results
+            if self.with_human_instance:
+                for human_idx in range(human_scores.shape[0]):
+                    human_instance_res.append(
+                        {
+                            "category_id": human_labels[human_idx].cpu().tolist(),
+                            "score": human_scores[human_idx].cpu().tolist(),
+                            "mask": human_masks[human_idx].cpu(),
+                        }
+                    )
 
-        human_parsing_res = []
-        for human_id, human_score, human_mask in zip(human_ids, human_scores, human_masks):
-            for part_id, part_label, part_score, part_mask in zip(part_ids, part_labels, part_scores, part_masks):
-                iop = compute_parsing_IoP(copy.deepcopy(human_mask > 0), copy.deepcopy(part_mask > 0))
-                iop_mtrx[human_id, part_id] = iop
+            # human parsing results
+            iop_mtrx = torch.zeros((human_scores.shape[0], part_scores.shape[0]), dtype=torch.float32)
+            matching_mtrx = torch.zeros((human_scores.shape[0], part_scores.shape[0]), dtype=torch.uint8)
+            human_ids = torch.arange(human_masks.shape[0])
+            part_ids = torch.arange(part_masks.shape[0])
 
-                if iop >= self.iop_thresh:
-                    matching_mtrx[human_id, part_id] = 1
+            for human_id, human_score, human_mask in zip(human_ids, human_scores, human_masks):
+                for part_id, part_label, part_score, part_mask in zip(part_ids, part_labels, part_scores, part_masks):
+                    iop = compute_parsing_IoP(copy.deepcopy(human_mask > 0), copy.deepcopy(part_mask > 0))
+                    iop_mtrx[human_id, part_id] = iop
 
-            matched_part_ids = torch.where(matching_mtrx[human_id] == 1)[0]
+                    if iop >= self.iop_thresh:
+                        matching_mtrx[human_id, part_id] = 1
 
-            parsing_score, parsing = self.get_human_parsing(
-                human_score,
-                human_mask,
-                part_scores[matched_part_ids],
-                part_labels[matched_part_ids],
-                part_masks[matched_part_ids]
-            )
+                matched_part_ids = torch.where(matching_mtrx[human_id] == 1)[0]
 
-            human_parsing_res.append(
-                {
-                    "parsing": parsing.cpu(),
-                    "instance_score": parsing_score.cpu().tolist(),
-                }
-            )
+                parsing_score, parsing = self.get_human_parsing(
+                    human_score,
+                    human_mask,
+                    part_scores[matched_part_ids],
+                    part_labels[matched_part_ids],
+                    part_masks[matched_part_ids]
+                )
 
-        return semantic_res, part_instance_res, human_instance_res, human_parsing_res
+                human_parsing_res.append(
+                    {
+                        "parsing": parsing.cpu(),
+                        "instance_score": parsing_score.cpu().tolist(),
+                    }
+                )
 
-    def paste_instance_to_semseg_probs(self, labels, scores, prob_masks):
-        """
-            receive only part instance predictions
-        """
+        return {
+            "semseg_outputs": semantic_res,
+            "part_outputs": part_instance_res,
+            "human_outputs": human_instance_res,
+            "parsing_outputs": human_parsing_res,
+        }
 
-        num_classes = self.sem_seg_head.num_classes - 1 if self.with_human_instance \
-            else self.sem_seg_head.num_classes  # force num_classes equal to number of part categories
+    def paste_instance_to_semseg_probs(self, labels, scores, mask_probs):
+        im_h, im_w = mask_probs.shape[-2:]
 
-        im_h, im_w = prob_masks.shape[-2:]
-        semseg_im = [torch.zeros((im_h, im_w), dtype=torch.float32, device=prob_masks.device) + 1e-6]
-        for cls_ind in range(1, num_classes + 1):
-            cate_inds = torch.where(labels == cls_ind)
+        # get bkg prob map
+        if self.with_bkg_instance:
+            # get bkg instances
+            bkg_inds = torch.where(labels == 0)[0]
+            bkg_scores = scores[bkg_inds]
+            bkg_mask_probs = mask_probs[bkg_inds, :, :]
 
-            scores_cate = scores[cate_inds]
-            masks_cate = prob_masks[cate_inds].sigmoid()
+            semseg_im = [self.paste_category_probs(bkg_scores, bkg_mask_probs, im_h, im_w)]
+        else:
+            semseg_im = [torch.zeros((im_h, im_w), dtype=torch.float32, device=mask_probs.device) + 1e-6]
 
-            semseg_cate = torch.zeros((im_h, im_w), dtype=torch.float32, device=prob_masks.device)
-            _indx = scores_cate.argsort()
-            for k in range(len(_indx)):
-                if scores_cate[_indx[k]] < self.parsing_ins_score_thr:
-                    continue
-                _ins_mask = masks_cate[_indx[k]] * scores_cate[_indx[k]]
-                semseg_cate = torch.where(_ins_mask > 0.5, _ins_mask + semseg_cate, semseg_cate)
+        # get part prob maps
+        for cls_ind in range(1, self.metadata.num_parsing):
+            cate_inds = torch.where(labels == cls_ind)[0]
+            cate_scores = scores[cate_inds]
+            cate_mask_probs = mask_probs[cate_inds, :, :].sigmoid()  # (N, H, W)
 
-            semseg_im.append(semseg_cate)
+            semseg_im.append(self.paste_category_probs(cate_scores, cate_mask_probs, im_h, im_w))
 
-        return torch.stack(semseg_im, dim=0).cpu()
+        return F.softmax(torch.stack(semseg_im, dim=0), dim=0).cpu()
 
-    def paste_instance_to_semseg_probs_withbkg(self, labels, scores, prob_masks):
-        """
-            receive background and part instance predictions
-        """
+    def paste_category_probs(self, scores, mask_probs, h, w):
+        category_probs = torch.zeros((h, w), dtype=torch.float32, device=mask_probs.device)
+        paste_times = torch.ones((h, w), dtype=torch.float32, device=mask_probs.device)
 
-        num_classes = self.sem_seg_head.num_classes
-        im_h, im_w = prob_masks.shape[-2:]
-        semseg_im = []
-        for cls_ind in range(num_classes):
-            cate_inds = torch.where(labels == cls_ind)
-            scores_cate = scores[cate_inds]
-            masks_cate = prob_masks[cate_inds].sigmoid()
+        index = scores.argsort()
+        for k in range(len(index)):
+            if scores[index[k]] < self.parsing_ins_score_thr:
+                continue
+            ins_mask_probs = mask_probs[index[k], :, :] * scores[index[k]]
+            category_probs = torch.where(ins_mask_probs > 0.5, ins_mask_probs + category_probs, category_probs)
 
-            semseg_cate = torch.zeros((im_h, im_w), dtype=torch.float32, device=prob_masks.device)
-            _indx = scores_cate.argsort()
-            for k in range(len(_indx)):
-                if scores_cate[_indx[k]] < self.parsing_ins_score_thr:
-                    continue
-                _ins_mask = masks_cate[_indx[k]] * scores_cate[_indx[k]]
-                semseg_cate = torch.where(_ins_mask > 0.5, _ins_mask + semseg_cate, semseg_cate)
+            if k >= 1:
+                paste_times += torch.where(ins_mask_probs > 0.5, 1, 0)
 
-            semseg_im.append(semseg_cate)
+        category_probs /= paste_times
 
-        return torch.stack(semseg_im, dim=0).cpu()
+        return category_probs
 
     def get_human_parsing(self, human_score, human_mask, part_scores, part_labels, part_masks):
         im_h, im_w = part_masks.shape[-2:]
@@ -630,7 +586,7 @@ class MaskFormer(nn.Module):
         parsing_probs = [1 - human_mask.sigmoid()]
 
         valid_cls = 1
-        for cls_ind in range(1, self.sem_seg_head.num_classes):  # skip class 'human'
+        for cls_ind in range(1, self.metadata.num_parsing):  # skip class 'human'
             cate_ind = torch.where(part_labels == cls_ind)[0]
             if len(cate_ind) == 0:
                 score_cate = torch.tensor(0., device=part_scores.device)
@@ -654,34 +610,3 @@ class MaskFormer(nn.Module):
         parsing = parsing_probs.argmax(dim=0).to(dtype=torch.uint8)
 
         return parsing_score, parsing
-
-    def restrict_mask_to_fg(self, pred_mask):
-        """
-        Returns:
-            Boxes: tight bounding boxes around bitmasks.
-            If a mask is empty, it's bounding box will be all zero.
-        """
-        assert (len(pred_mask.shape) == 3)
-
-        _pred_mask = copy.deepcopy(pred_mask)
-        binary_logits = (_pred_mask > 0).int()
-
-        boxes = torch.zeros(binary_logits.shape[0], 4, dtype=torch.float32)
-        x_any = torch.any(binary_logits, dim=1)
-        y_any = torch.any(binary_logits, dim=2)
-        for idx in range(binary_logits.shape[0]):
-            x = torch.where(x_any[idx, :])[0]
-            y = torch.where(y_any[idx, :])[0]
-            if len(x) > 0 and len(y) > 0:
-                boxes[idx, :] = torch.as_tensor(
-                    [x[0], y[0], x[-1] + 1, y[-1] + 1], dtype=torch.float32
-                )
-
-        _mask = torch.zeros(
-            boxes.shape[0], binary_logits.shape[1], binary_logits.shape[2], dtype=torch.float32, device=pred_mask.device
-        )
-        for ins_id in range(boxes.shape[0]):
-            box = boxes[ins_id]
-            _mask[ins_id, int(box[1]):int(box[3]), int(box[0]):int(box[2])] = 1
-
-        return pred_mask * _mask

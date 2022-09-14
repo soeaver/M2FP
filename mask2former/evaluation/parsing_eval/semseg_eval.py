@@ -2,7 +2,7 @@ import sys
 
 import cv2
 import numpy as np
-import os
+import os, glob
 from tqdm import tqdm
 import logging
 
@@ -12,15 +12,14 @@ class SemSegEvaluator(object):
     Evaluate semantic segmentation
     """
 
-    def __init__(self, dataset, metadata, pred_dir, num_classes, metrics=("mIoU", "IoU", "F1Score")):
+    def __init__(self, metadata, pred_dir, num_classes, metrics=("mIoU", "IoU", "F1Score")):
         """
         Initialize SemSegEvaluator
         :return: None
         """
 
         self.pred_dir = pred_dir
-        self.gt_dir = metadata.semantic_gt_root
-        self.dataset = dataset
+        self.gt_dir = metadata.category_gt_root
         self.num_classes = num_classes
 
         assert metadata.semseg is not None
@@ -33,7 +32,6 @@ class SemSegEvaluator(object):
         self.name_trans = metadata.semseg["name_trans"] \
             if metadata.semseg["name_trans"] is not None else ('jpg', 'png')
 
-        self.ids = dataset.ids
         self.metrics = metrics
 
         self.stats = dict()
@@ -58,12 +56,15 @@ class SemSegEvaluator(object):
     def evaluate(self):
         self._logger.info('Evaluating Semantic Segmentation predictions')
         hist = np.zeros((self.num_classes, self.num_classes))
+
         pred = []
         for ss in os.listdir(os.path.join(self.pred_dir, 'semantic')):
             pred.append({ss: cv2.imread(os.path.join(self.pred_dir, 'semantic', ss), -1)})
 
-        for i in tqdm(self.ids, desc='Calculating IoU ..'):
-            image_name = self.dataset.coco.imgs[i]['file_name'].replace(*self.name_trans)
+        image_names = [x.split("/")[-1] for x in glob.glob(self.gt_dir + '/*') if x[-3:] == 'png']
+        self._logger.info('The Global Parsing Images: {}'.format(len(image_names)))
+
+        for image_name in image_names:
             semseg_res = [x for x in pred if image_name in x]
             if len(semseg_res) == 0:
                 continue

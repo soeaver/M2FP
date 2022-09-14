@@ -2,7 +2,8 @@
 import os
 
 from detectron2.data import DatasetCatalog, MetadataCatalog
-from detectron2.data.datasets.coco import load_coco_json
+
+from .parsing import load_parsing
 
 
 CIHP_PARSING_CATEGORIES = [
@@ -35,14 +36,12 @@ CIHP_FLIP_MAP = ((14, 15), (16, 17), (18, 19))
 
 _PREDEFINED_SPLITS = {
     "cihp_parsing_train": (
-        "cihp/annotations/CIHP_parsing_train.json",
         "cihp/Training/Images/",
         "cihp/Training/Category_ids/",
         "cihp/Training/Instance_ids/",
         "cihp/Training/Human_ids/",
     ),
     "cihp_parsing_val": (
-        "cihp/annotations/CIHP_parsing_val.json",
         "cihp/Validation/Images/",
         "cihp/Validation/Category_ids/",
         "cihp/Validation/Instance_ids/",
@@ -74,27 +73,21 @@ def _get_cihp_parsing_meta():
 
 def register_cihp_parsing(root):
     meta = _get_cihp_parsing_meta()
-    extra_keys = ["parsing_id", "area", "ispart", "isfg"]
-    for name, (json_file, image_root, semantic_gt_root, part_gt_root, human_gt_root) in _PREDEFINED_SPLITS.items():
-        json_file = os.path.join(root, json_file)
+    for name, (image_root, category_gt_root, instance_gt_root, human_gt_root) in _PREDEFINED_SPLITS.items():
         image_root = os.path.join(root, image_root)
-        semantic_gt_root = os.path.join(root, semantic_gt_root)
-        part_gt_root = os.path.join(root, part_gt_root)
+        category_gt_root = os.path.join(root, category_gt_root)
+        instance_gt_root = os.path.join(root, instance_gt_root)
         human_gt_root = os.path.join(root, human_gt_root)
 
         DatasetCatalog.register(
-            name,
-            lambda json_file=json_file, image_root=image_root, name=name, extra_keys=extra_keys: load_coco_json(
-                json_file, image_root,
-                dataset_name=name,
-                extra_annotation_keys=extra_keys
+            name, lambda k=image_root, l=category_gt_root, m=instance_gt_root, n=human_gt_root: load_parsing(
+                l, m, n, k, gt_ext="png", image_ext="jpg"
             )
         )
         MetadataCatalog.get(name).set(
-            json_file=json_file,
             image_root=image_root,
-            semantic_gt_root=semantic_gt_root,
-            part_gt_root=part_gt_root,
+            category_gt_root=category_gt_root,
+            instance_gt_root=instance_gt_root,
             human_gt_root=human_gt_root,
             evaluator_type="parsing",
             **meta

@@ -5,6 +5,7 @@ import copy
 import itertools
 import json
 import logging
+import sys
 from collections import OrderedDict
 
 import cv2
@@ -54,8 +55,6 @@ class ParsingEvaluator(DatasetEvaluator):
         if output_dir is None:
             raise ValueError("output_dir must be provided to ParsingEvaluator.")
 
-        self.dataset = CocoDetection(self._metadata.image_root, self._metadata.json_file)
-
         self._do_evaluation = True
 
     def reset(self):
@@ -66,57 +65,78 @@ class ParsingEvaluator(DatasetEvaluator):
 
         output_dict = outputs[-1]['parsing']
 
-        # save results to png
+        image_name = inputs[0]["file_name"].split("/")[-1].split(".")[0]
         output_root = self._output_dir
+        image_shape = (inputs[0]['height'], inputs[0]['width'])
 
         # semseg_predictions
         semseg_path = os.path.join(output_root, 'semantic')
         os.makedirs(semseg_path, exist_ok=True)
 
         semseg_img = output_dict["semseg_outputs"].argmax(dim=0).cpu().numpy()
-        semseg_name = os.path.join(semseg_path, os.path.splitext(inputs[0]["file_name"])[0].split('/')[-1] + '.png')
+        semseg_name = os.path.join(semseg_path, image_name + '.png')
         cv2.imwrite(semseg_name, semseg_img)
 
         # part predictions
         part_path = os.path.join(output_root, 'part')
         os.makedirs(part_path, exist_ok=True)
-        part_list = []
 
-        for part_output in output_dict["part_outputs"]:
-            part_prediction = {"image_id": inputs[0]["image_id"]}
-            part_prediction["img_name"] = inputs[0]["file_name"].split('/')[-1].split('.')[0]
-            part_prediction["category_id"] = part_output["category_id"]
-            part_prediction["score"] = part_output["score"]
-            _rle = mask_util.encode(np.array((part_output["mask"] > 0)[:, :, None], order="F", dtype="uint8"))[0]
-            _rle["counts"] = _rle["counts"].decode("utf-8")
-            part_prediction['mask'] = _rle
-            if len(part_prediction) > 1:
-                part_list.append(part_prediction)
+        pasted_part_image = np.zeros(image_shape, dtype=np.uint8)
+        part_info = []
 
-        part_name = os.path.join(part_path, '{}.json'.format(inputs[0]["image_id"]))
-        json.dump(part_list, open(part_name, 'w'))
+        sorted_part_id = np.array([_s['score'] for _s in output_dict['part_outputs']]).argsort()
+        for _num_part, part_id in enumerate(sorted_part_id):
+            # part_id starts from 0
+            part_output = output_dict['part_outputs'][part_id]
+            # reserve id 0 for background
+            if _num_part >= 255:  # need to check
+                pasted_part_image = np.where(part_output['mask'] > 0, 0, pasted_part_image)
+            else:
+                pasted_part_image = np.where(part_output['mask'] > 0, _num_part + 1, pasted_part_image)
+            part_info_tmp = {
+                'img_name': image_name,
+                'category_id': part_output["category_id"],
+                'score': part_output["score"],
+                'part_id': int(_num_part + 1),
+            }
+            part_info.append(part_info_tmp)
+
+        cv2.imwrite(os.path.join(part_path, '{}.png'.format(image_name)), pasted_part_image)
+        part_name = os.path.join(part_path, '{}.json'.format(image_name))
+        json.dump(part_info, open(part_name, 'w'))
 
         # human predictions
         human_path = os.path.join(output_root, 'human')
         os.makedirs(human_path, exist_ok=True)
-        human_list = []
 
-        for human_output in output_dict["human_outputs"]:
-            human_prediction = {"image_id": inputs[0]["image_id"]}
-            human_prediction["img_name"] = inputs[0]["file_name"].split('/')[-1].split('.')[0]
-            human_prediction["category_id"] = human_output["category_id"]
-            human_prediction["score"] = human_output["score"]
-            _rle2 = mask_util.encode(np.array((human_output["mask"] > 0)[:, :, None], order="F", dtype="uint8"))[0]
-            _rle2["counts"] = _rle2["counts"].decode("utf-8")
-            human_prediction["mask"] = _rle2
-            if len(human_prediction) > 1:
-                human_list.append(human_prediction)
+        pasted_human_image = np.zeros(image_shape, dtype=np.uint8)
+        human_info = []
 
-        human_name = os.path.join(human_path, '{}.json'.format(inputs[0]["image_id"]))
-        json.dump(human_list, open(human_name, 'w'))
+        sorted_human_id = np.array([_s['score'] for _s in output_dict['human_outputs']]).argsort()
+        for _num_human, human_id in enumerate(sorted_human_id):
+            # human_id starts from 0
+            human_output = output_dict['human_outputs'][human_id]
+            # reserve id 0 for background
+            if _num_human >= 255:
+                pasted_human_image = np.where(human_output['mask'] > 0, 0, pasted_human_image)
+            else:
+                pasted_human_image = np.where(human_output['mask'] > 0, _num_human + 1, pasted_human_image)
+            human_info_tmp = {
+                'img_name': image_name,
+                'category_id': human_output["category_id"],
+                'score': human_output["score"],
+                'human_id': int(_num_human + 1),
+            }
+            human_info.append(human_info_tmp)
 
+        cv2.imwrite(os.path.join(human_path, '{}.png'.format(image_name)), pasted_human_image)
+        human_name = os.path.join(human_path, '{}.json'.format(image_name))
+        json.dump(human_info, open(human_name, 'w'))
+
+        # parsing predictions
         for parsing_output in output_dict["parsing_outputs"]:
-            parsing_prediction = {"image_id": inputs[0]["image_id"]}
+            parsing_prediction = {}
+            parsing_prediction["img_name"] = image_name
             parsing_prediction['parsing'] = csr_matrix(parsing_output["parsing"].numpy())
             parsing_prediction['score'] = parsing_output["instance_score"]
             if len(parsing_prediction) > 1:
@@ -149,7 +169,14 @@ class ParsingEvaluator(DatasetEvaluator):
 
         self._results = OrderedDict()
 
-        self._eval_parsing_predictions(parsing_prediction)
+        eval_res = self._eval_parsing_predictions(parsing_prediction)
+
+        self._results["mIoU"] = eval_res["mIoU"]
+        self._results["APr"]  = np.nanmean(np.array(list(eval_res["APr"].values())))
+        if "APh" in self.metrics:
+            self._results["APh"]  = np.nanmean(np.array(list(eval_res["APh"].values())))
+        if "APp" in self.metrics:
+            self._results["APp"]  = np.nanmean(np.array(list(eval_res["APp"].values())))
 
         # Copy so the caller can do whatever with results
         return copy.deepcopy(self._results)
@@ -162,10 +189,9 @@ class ParsingEvaluator(DatasetEvaluator):
 
         if not self._do_evaluation:
             self._logger.info("Annotations are not available for evaluation.")
-            return
+            return {}
 
-        _evaluate_predictions_for_parsing(
-            self.dataset,
+        return _evaluate_predictions_for_parsing(
             parsing_results,
             self._metadata,
             self._output_dir,
@@ -174,7 +200,6 @@ class ParsingEvaluator(DatasetEvaluator):
 
 
 def _evaluate_predictions_for_parsing(
-        dataset,
         parsing_results,
         metadata,
         output_folder,
@@ -186,13 +211,14 @@ def _evaluate_predictions_for_parsing(
     model_parsing_score_threse = 0.01
 
     parsing_eval = ParsingEval(
-        dataset,
         parsing_results,
         metadata,
         output_folder,
         model_parsing_score_threse,
         metrics=metrics
     )
-    parsing_eval.evaluate()
+    eval_res = parsing_eval.evaluate()
     parsing_eval.accumulate()
     parsing_eval.summarize()
+
+    return eval_res

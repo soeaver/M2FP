@@ -24,7 +24,6 @@ class ParsingEval(object):
 
     def __init__(
             self,
-            parsingGt=None,
             parsingPred=None,
             metadata=None,
             pred_dir=None,
@@ -39,14 +38,13 @@ class ParsingEval(object):
         :param parsingPred:
         :return: None
         """
-        self.parsingGt = parsingGt  # CocoDetection
         self.parsingPred = parsingPred
         self.score_thresh = score_thresh
         self.metrics = metrics
 
         self.pred_dir = pred_dir
-        self.semantic_gt_dir = metadata.semantic_gt_root
-        self.part_gt_dir = metadata.part_gt_root
+        self.category_gt_dir = metadata.category_gt_root
+        self.instance_gt_dir = metadata.instance_gt_root
         self.human_gt_dir = metadata.human_gt_root
         self.num_parsing = metadata.num_parsing
 
@@ -61,11 +59,8 @@ class ParsingEval(object):
         self._logger = logging.getLogger(__name__)
 
         if 'mIoU' in self.metrics or 'miou' in self.metrics:
-            assert os.path.exists(self.semantic_gt_dir)
-            self._logger.info('The Global Parsing Images: {}'.format(len(parsingGt)))
-            self.semseg_eval = SemSegEvaluator(
-                parsingGt, metadata, self.pred_dir, self.num_parsing
-            )
+            assert os.path.exists(self.category_gt_dir)
+            self.semseg_eval = SemSegEvaluator(metadata, self.pred_dir, self.num_parsing)
             self.semseg_eval.evaluate()
             self.semseg_eval.accumulate()
             self.semseg_eval.summarize()
@@ -76,21 +71,14 @@ class ParsingEval(object):
         self._logger.info('preparing for calucate APp')
         class_recs = dict()
         npos = 0
-        image_ids = self.parsingGt.coco.getImgIds()
-        image_ids.sort()
-        for image_id in image_ids:
-            ann_ids = self.parsingGt.coco.getAnnIds(imgIds=image_id, iscrowd=None)
-            objs = self.parsingGt.coco.loadAnns(ann_ids)
-            # gt_box = []
-            parsing_ids = [obj["parsing_id"] for obj in objs if obj['category_id'] == self.num_parsing]
 
-            anno_adds = get_parsing(
-                self.human_gt_dir, self.semantic_gt_dir,
-                self.parsingGt.coco.loadImgs(image_id)[0]['file_name'], parsing_ids
-            )
+        image_names = [x.split("/")[-1].split(".")[0] for x in glob.glob(self.human_gt_dir + '/*') if x[-3:] == 'png']
+        for image_name in image_names:
+            anno_adds = get_parsing(self.human_gt_dir, self.category_gt_dir, image_name)
             npos = npos + len(anno_adds)
             det = [False] * len(anno_adds)
-            class_recs[image_id] = {'anno_adds': anno_adds, 'det': det}
+            class_recs[image_name] = {'anno_adds': anno_adds, 'det': det}
+
         self._logger.info('prepare done')
         return class_recs, npos
 
@@ -99,6 +87,8 @@ class ParsingEval(object):
         Compute VOC AP given precision and recall.
         If use_07_metric is true, uses the
         VOC 07 11 point method (default:False).
+
+        rec, prec: ndarray, (num_pred,)
         """
         if use_07_metric:
             # 11 point metric
@@ -172,7 +162,7 @@ class ParsingEval(object):
         intersection = np.logical_and(gt_mask, pred_masks)
         # True then the corresponding position of output is 1, otherwise is 0.
         intersection = np.where(intersection == True, 1, 0).astype(np.uint8)  # noqa
-        intersection = self._count_nonzero(intersection)
+        intersection = self._count_nonzero(intersection)  # (num_pred,)
 
         mask_gt_areas = np.full(len(pred_mask_areas), gt_mask_area)
         union = mask_gt_areas + pred_mask_areas[:] - intersection[:]
@@ -229,11 +219,11 @@ class ParsingEval(object):
         """
         masks = []
         inst_ids = np.unique(inst_id_map)
-        # self._logger.info("inst_ids:", inst_ids)
+
         background_ind = np.where(inst_ids == 0)[0]
         inst_ids = np.delete(inst_ids, background_ind)
         for i in inst_ids:
-            im_mask = (inst_id_map == i).astype(np.uint8)  # get single human insseg mask
+            im_mask = (inst_id_map == i).astype(np.uint8)
             masks.append(im_mask)
         return masks, len(inst_ids)
 
@@ -251,21 +241,6 @@ class ParsingEval(object):
             true_pos.append([])
             false_pos.append([])
 
-        part_img_cat_dict = {}
-        part_predictions = []
-        for pp in os.listdir(os.path.join(self.pred_dir, 'part')):
-            pp_dict = json.load(open(os.path.join(self.pred_dir, 'part', pp), 'r'))
-            for _p in pp_dict:
-                _p['mask']=mask_utils.decode(_p['mask'])
-            part_predictions.extend(pp_dict)
-
-        for pred_im in part_predictions:
-            if pred_im["img_name"] not in part_img_cat_dict:
-                part_img_cat_dict[pred_im["img_name"]] = {}
-            if int(pred_im['category_id']) not in part_img_cat_dict[pred_im["img_name"]]:
-                part_img_cat_dict[pred_im["img_name"]][int(pred_im['category_id'])] = []
-            part_img_cat_dict[pred_im["img_name"]][int(pred_im['category_id'])].append(pred_im)
-
         for img_name in tqdm(img_name_list, desc='Calculating class: {}..'.format(class_id)):
             instance_img_gt = Image.open(os.path.join(instance_par_gt_dir, img_name + '.png'))
             instance_img_gt = np.array(instance_img_gt)
@@ -273,7 +248,7 @@ class ParsingEval(object):
             # File for accelerating computation.
             # Each line has three numbers: "instance_part_id class_id human_id".
             rfp = open(os.path.join(instance_par_gt_dir, img_name + '.txt'), 'r')
-            # Instance ID from groundtruth file.
+            # Instance ID from gt file.
             gt_part_id = []
             gt_id = []
             for line in rfp.readlines():
@@ -283,19 +258,24 @@ class ParsingEval(object):
                     gt_id.append(int(line[0]))
             rfp.close()
 
-            try:
-                partPred_cls = part_img_cat_dict[img_name][class_id]
-            except:
-                partPred_cls = []
+            part_pred_cls = []
+            part_pred_image = cv2.imread(os.path.join(self.pred_dir, "part", img_name + ".png"), 0)
+            with open(os.path.join(self.pred_dir, "part", img_name + ".json"), 'r') as f:
+                part_pred_dict = json.load(f)
+                for pred in part_pred_dict:
+                    if pred["category_id"] == class_id:
+                        pred['mask'] = np.where(part_pred_image == pred['part_id'], 1, 0)
+                        part_pred_cls.append(pred)
 
-            pred_masks = [x["mask"] for x in partPred_cls]
-            pred_scores = [float(x["score"]) for x in partPred_cls]
-            num_pred_instance = len(partPred_cls)
+            num_pred_instance = len(part_pred_cls)
+            pred_masks = [x["mask"] for x in part_pred_cls]
+            pred_scores = [float(x["score"]) for x in part_pred_cls]
 
             # Mask for specified class, i.e., *class_id*
             gt_masks, num_gt_instance = self._split_masks(instance_img_gt, set(gt_id))
             num_gt_masks += num_gt_instance
             num_pred_masks += num_pred_instance
+
             if num_pred_instance == 0:
                 continue
 
@@ -312,7 +292,7 @@ class ParsingEval(object):
 
             gt_masks = np.stack(gt_masks)
             pred_masks = np.stack(pred_masks)
-            # Compute IoU overlaps [pred_masks, gt_makss]
+            # Compute IoU overlaps [pred_masks, gt_masks]
             # overlaps[i, j]: IoU between predicted mask i and gt mask j
             overlaps = self._compute_mask_overlaps(pred_masks, gt_masks)
 
@@ -348,15 +328,15 @@ class ParsingEval(object):
 
         parsings = []
         scores = []
-        image_ids = []
+        image_names = []
         for idx, p in enumerate(self.parsingPred):
             parsings.append(p['parsing'])
             scores.append(p['score'])
-            image_ids.append(p['image_id'])
+            image_names.append(p['img_name'])
         scores = np.array(scores)
         sorted_ind = np.argsort(-scores)
 
-        nd = len(image_ids)
+        nd = len(image_names)
         tp_seg = [np.zeros(nd) for _ in range(len(self.par_thresholds))]
         fp_seg = [np.zeros(nd) for _ in range(len(self.par_thresholds))]
         pcp_list = [[] for _ in range(len(self.par_thresholds))]
@@ -366,11 +346,11 @@ class ParsingEval(object):
                 continue
             R = []
             for j in range(len(self.par_thresholds)):
-                R.append(class_recs[j][image_ids[cur_id]])
+                R.append(class_recs[j][image_names[cur_id]])
             ovmax = -np.inf
             jmax = -1
 
-            mask0 = parsings[cur_id].toarray()  # curr pred, single person instance
+            mask0 = parsings[cur_id].toarray()
             mask_pred = mask0.astype(np.int)
             mask_gt_u = seg_iou_max = None
             for i in range(len(R[0]['anno_adds'])):
@@ -419,7 +399,7 @@ class ParsingEval(object):
 
     def computeAPr(self):
         self._logger.info('Evaluating AP^r')
-        instance_par_gt_dir = self.part_gt_dir
+        instance_par_gt_dir = self.instance_gt_dir
         assert os.path.exists(instance_par_gt_dir)
 
         tmp_instance_par_gt_dir = instance_par_gt_dir
@@ -462,21 +442,21 @@ class ParsingEval(object):
         tmp_instance_seg_gt_dir = instance_seg_gt_dir
         img_name_list = [x.split("/")[-1].split(".")[0] for x in glob.glob(tmp_instance_seg_gt_dir + '/*')]
 
-        human_predictions = []
-        for hp in os.listdir(os.path.join(self.pred_dir, 'human')):
-            hp_dict = json.load(open(os.path.join(self.pred_dir, 'human', hp), 'r'))
-            for _p in hp_dict:
-                _p['mask'] = mask_utils.decode(_p['mask'])
-            human_predictions.extend(hp_dict)
-
         for img_name in tqdm(img_name_list, desc='Calculating APh..'):
             gt_mask = cv2.imread(os.path.join(instance_seg_gt_dir, img_name + '.png'), 0)
             gt_mask, n_gt_inst = self._convert2evalformat(gt_mask)
 
-            humanPred_im = [x for x in human_predictions if x["img_name"] == img_name]
-            pre_mask = [x["mask"] for x in humanPred_im]
-            tmp_scores = [float(x["score"]) for x in humanPred_im]
-            n_pre_inst = len(humanPred_im)
+            human_pred_im = []
+            human_pred_image = cv2.imread(os.path.join(self.pred_dir, "human", img_name + ".png"), 0)
+            with open(os.path.join(self.pred_dir, "human", img_name + ".json"), 'r') as f:
+                human_pred_dict = json.load(f)
+                for pred in human_pred_dict:
+                    pred['mask'] = np.where(human_pred_image == pred['part_id'], 1, 0)
+                    human_pred_im.append(pred)
+
+            n_pre_inst = len(human_pred_im)
+            pre_mask = [x["mask"] for x in human_pred_im]
+            tmp_scores = [float(x["score"]) for x in human_pred_im]
 
             gt_mask_num += n_gt_inst
             pre_mask_num += n_pre_inst
@@ -495,7 +475,7 @@ class ParsingEval(object):
 
             gt_mask = np.stack(gt_mask)
             pre_mask = np.stack(pre_mask)
-            overlaps = self._compute_mask_overlaps(pre_mask, gt_mask)  # (num_pred, num_gt)
+            overlaps = self._compute_mask_overlaps(pre_mask, gt_mask)
             max_overlap_ind = np.argmax(overlaps, axis=1)
             for i in np.arange(len(max_overlap_ind)):
                 max_iou = overlaps[i][max_overlap_ind[i]]
@@ -535,6 +515,7 @@ class ParsingEval(object):
         if 'APh' in self.metrics or 'ap^h' in self.metrics:
             APh = self.computeAPh()
             self.stats.update(dict(APh=APh))
+        return self.stats
 
     def accumulate(self, p=None):
         pass
@@ -627,13 +608,18 @@ class Params:
         self.iouType = iouType
 
 
-def get_parsing(human_dir, category_dir, file_name, parsing_ids):
-    file_name = file_name.replace('jpg', 'png')
+def get_parsing(human_dir, category_dir, file_name):
+    file_name += '.png'
     human_path = os.path.join(human_dir, file_name)
     category_path = os.path.join(category_dir, file_name)
     human_mask = cv2.imread(human_path, 0)
     category_mask = cv2.imread(category_path, 0)
+
+    parsing_ids = np.unique(human_mask)
+    bg_id_index = np.where(parsing_ids == 0)[0]
+    parsing_ids = np.delete(parsing_ids, bg_id_index)
+
     parsing = []
-    for id in parsing_ids:
-        parsing.append(category_mask * (human_mask == id))
+    for parsing_id in parsing_ids:
+        parsing.append(category_mask * (human_mask == parsing_id))
     return parsing

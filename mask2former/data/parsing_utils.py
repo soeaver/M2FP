@@ -19,9 +19,8 @@ from .transforms.transform import PadTransform
 
 __all__ = [
     "read_semseg_gt",
-    "filter_instance_by_attributes",
+    "gen_parsing_instances",
     "flip_human_semantic_category",
-    "transform_parsing_instance_annotations",
     "affine_to_target_size",
     "center_to_target_size_semantic",
     "center_to_target_size_parsing",
@@ -43,36 +42,49 @@ def read_semseg_gt(file_name):
         return gt_array
 
 
-def filter_instance_by_attributes(dataset_dicts, with_human_ins, with_bkg_ins):
-    annos = dataset_dicts.pop("annotations")
-    """
-             ispart  isfg
-    part  :    1      1
-    human :    0      1
-    bkg   :    0      0
-    """
+def gen_parsing_instances(human_png, category_png, with_bkg_instance, with_human_instance, num_parsing):
+    classes = []
+    masks = []
 
-    new_annos = []
-    if not with_bkg_ins and not with_human_ins:  # discard bkg and human instances
-        for obj in annos:
-            if obj["ispart"] == 1 and obj["isfg"] == 1:
-                obj['category_id'] -= 1
-                new_annos.append(obj)
-    elif with_bkg_ins and not with_human_ins:  # discard human instances
-        for obj in annos:
-            if obj["ispart"] == obj["isfg"]:
-                new_annos.append(obj)
-    elif not with_bkg_ins and with_human_ins:  # discard bkg instances
-        for obj in annos:
-            if obj["isfg"] == 1:
-                if obj["ispart"] == 0:
-                    obj['category_id'] = 0
-                new_annos.append(obj)
-    else: # keep all part, bkg and human instances
-        raise NotImplementedError("Parsing with part, human and bkg instances not implemented yet !!!")
+    # generate parsing png for each human
+    parsing_ids = np.unique(human_png)
+    bg_id_index = np.where(parsing_ids == 0)[0]
+    parsing_ids = list(np.delete(parsing_ids, bg_id_index))
+    humans = np.stack([human_png == parsing_id for parsing_id in parsing_ids])
+    humans_categories = humans * category_png
 
-    dataset_dicts["annotations"] = new_annos
-    return dataset_dicts
+    # add bkg instance
+    if with_bkg_instance:
+        if np.max(np.where(human_png == 0, 1, 0) - np.where(category_png == 0, 1, 0)) == 0:
+            bkg_mask = np.where(human_png == 0, 1, 0).copy()
+        else:
+            bkg_mask = np.where(category_png == 0, 1, 0).copy()
+        bkg_class = 0
+        classes.append(bkg_class)
+        masks.append(bkg_mask)
+
+    for ind, human_id in enumerate(parsing_ids):
+        # add human instance
+        if with_human_instance:
+            human_mask = np.where(human_png == human_id, 1, 0).copy()
+            assert np.max(human_mask) == 1, "human {} is missed".format(human_id + 1)
+            human_class = num_parsing + 1
+            classes.append(human_class)
+            masks.append(human_mask)
+
+        # add part instances
+        human_categories = humans_categories[ind, :, :]
+        part_ids = np.unique(human_categories)
+        _bg_id_index = np.where(part_ids == 0)[0]
+        part_ids = list(np.delete(part_ids, _bg_id_index))
+
+        part_masks = [(human_categories == part_id).astype(np.uint8) for part_id in part_ids]
+        part_classes = part_ids
+
+        classes.extend(part_classes)
+        masks.extend(part_masks)
+
+    return classes, masks
 
 
 def flip_human_semantic_category(img, gt, flip_map, prob):
@@ -87,52 +99,6 @@ def flip_human_semantic_category(img, gt, flip_map, prob):
             gt[left] = new_label
             gt[right] = ori_label
     return img, gt
-
-
-def transform_parsing_instance_annotations(annotation, transforms, image_size, flip_map):
-
-    if isinstance(transforms, (tuple, list)):
-        transforms = T.TransformList(transforms)
-    # bbox is 1d (per-instance bounding box)
-    bbox = BoxMode.convert(annotation["bbox"], annotation["bbox_mode"], BoxMode.XYXY_ABS)
-    # clip transformed bbox to image size
-    bbox = transforms.apply_box(np.array([bbox]))[0].clip(min=0)
-    annotation["bbox"] = np.minimum(bbox, list(image_size + image_size)[::-1])
-    annotation["bbox_mode"] = BoxMode.XYXY_ABS
-
-    if "segmentation" in annotation:
-        segm = annotation["segmentation"]
-
-        if isinstance(segm, list):
-            # polygons
-            polygons = [np.asarray(p).reshape(-1, 2) for p in segm]
-            annotation["segmentation"] = [
-                p.reshape(-1) for p in transforms.apply_polygons(polygons)
-            ]
-
-            # change part label if do h_flip
-            annotation["category_id"] = flip_human_instance_category(
-                annotation["category_id"], transforms, flip_map
-            )
-        elif isinstance(segm, dict):
-            # RLE
-            mask = mask_util.decode(segm)
-            mask = transforms.apply_segmentation(mask)
-            assert tuple(mask.shape[:2]) == image_size
-            annotation["segmentation"] = mask
-
-            # change part label if do h_flip
-            annotation["category_id"] = flip_human_instance_category(
-                annotation["category_id"], transforms, flip_map
-            )
-        else:
-            raise ValueError(
-                "Cannot transform segmentation of type '{}'!"
-                "Supported types are: polygons as list[list[float] or ndarray],"
-                " COCO-style RLE as a dict.".format(type(segm))
-            )
-
-    return annotation
 
 
 def flip_human_instance_category(category, transforms, flip_map):
