@@ -14,17 +14,17 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
 DATASETS:
-  TRAIN: ("mhpv2_parsing_train",)
-  TEST: ("mhpv2_parsing_val",)
+  TRAIN: ("lapa_semseg_train",)
+  TEST: ("lapa_semseg_val",)
 SOLVER:
-  IMS_PER_BATCH: 16
-  BASE_LR: 0.0008 # * 8
-  STEPS: (166000, 176000)
-  MAX_ITER: 185000  # 120 ep for mhpv2 train with 15403 images
-  WARMUP_FACTOR: 0.000001
-  WARMUP_ITERS: 1500
+  IMS_PER_BATCH: 32
+  BASE_LR: 0.0002
+  MAX_ITER: 68000  # ~120 epcoch
+  WARMUP_FACTOR: 1.0
+  WARMUP_ITERS: 0
   WEIGHT_DECAY: 0.05
   OPTIMIZER: "ADAMW"
+  LR_SCHEDULER_NAME: "WarmupPolyLR"
   BACKBONE_MULTIPLIER: 0.1
   CLIP_GRADIENTS:
     ENABLED: True
@@ -34,11 +34,21 @@ SOLVER:
   AMP:
     ENABLED: True
 INPUT:
-  MIN_SIZE_TRAIN: (512, 640, 704, 768, 800, 864)
-  MAX_SIZE_TRAIN: 1400
-  DATASET_MAPPER_NAME: "mask_former_parsing"
+  FORMAT: "RGB"
+  DATASET_MAPPER_NAME: "mask_former_semantic_hp"
+  SINGLE_HUMAN:
+    ENABLED: True # use single human aug
+    SIZES: ([512, 512],)
+    SCALE_FACTOR: 0.3
+    ROTATION: True
+    ROT_FACTOR: 40
 TEST:
-  EVAL_PERIOD: 10000
+  EVAL_PERIOD: 2000
+  AUG:
+    ENABLED: False
+    MIN_SIZES: [512]
+    MAX_SIZE: 2048
+    FLIP: True
 DATALOADER:
   FILTER_EMPTY_ANNOTATIONS: True
   NUM_WORKERS: 4

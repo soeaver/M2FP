@@ -1,4 +1,4 @@
-_BASE_: maskformer2_R50_bs16_13k.yaml
+_BASE_: maskformer2_R50_bs64_32k.yaml
 MODEL:
   WEIGHTS: "./weights/R-103.pkl"
   BACKBONE:
@@ -8,8 +8,8 @@ MODEL:
     STEM_TYPE: "deeplab"
     STEM_OUT_CHANNELS: 128
     STRIDE_IN_1X1: False
-    OUT_FEATURES: [ "res2", "res3", "res4", "res5" ]
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
     # NORM: "SyncBN"
-    RES5_MULTI_GRID: [ 1, 1, 1 ]  # not used
-SOLVER:
-  BASE_LR: 0.0002  # 0.0001
+    RES5_MULTI_GRID: [1, 1, 1]  # not used
+#  MASK_FORMER:
+#    NUM_OBJECT_QUERIES: 32

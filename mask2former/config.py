@@ -46,6 +46,7 @@ def add_maskformer2_config(cfg):
 
     cfg.MODEL.MASK_FORMER.HIDDEN_DIM = 256
     cfg.MODEL.MASK_FORMER.NUM_OBJECT_QUERIES = 100
+    cfg.MODEL.MASK_FORMER.HIER_QUERIES = 0
 
     cfg.MODEL.MASK_FORMER.TRANSFORMER_IN_FEATURE = "res5"
     cfg.MODEL.MASK_FORMER.ENFORCE_INPUT_PROJ = False
@@ -115,6 +116,7 @@ def add_maskformer2_config(cfg):
     cfg.INPUT.SINGLE_HUMAN.SCALE_FACTOR = 0.3
     cfg.INPUT.SINGLE_HUMAN.ROTATION = True
     cfg.INPUT.SINGLE_HUMAN.ROT_FACTOR = 40
+    cfg.INPUT.SINGLE_HUMAN.COLOR_AUG_SSD = False
 
     # MSDeformAttn encoder configs
     cfg.MODEL.SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES = ["res3", "res4", "res5"]

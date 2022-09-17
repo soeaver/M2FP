@@ -1,4 +1,4 @@
-_BASE_: ../Base-LIP-Parsing.yaml
+_BASE_: ../Base-CIHP-Parsing.yaml
 MODEL:
   META_ARCHITECTURE: "MaskFormer"
   SEM_SEG_HEAD:
@@ -38,24 +38,28 @@ MODEL:
     IMPORTANCE_SAMPLE_RATIO: 0.75
     TEST:
       SEMANTIC_ON: False
-      INSTANCE_ON: True
+      INSTANCE_ON: False
       PANOPTIC_ON: False
       PARSING_ON: True
       OVERLAP_THRESHOLD: 0.8
       OBJECT_MASK_THRESHOLD: 0.8
       PARSING:
+        # WITH_HUMAN_INSTANCE: True
         WITH_BKG_INSTANCE: True
-        PARSING_INS_SCORE_THR: 0.3
         METRICS: ("mIoU", "APr")
+        PARSING_INS_SCORE_THR: 0.3
+        IOP_THR: 0.3
 SOLVER:
-  IMS_PER_BATCH: 64  # 16
-  BASE_LR: 0.0004  # 0.0001
-  STEPS: (55000, 63000)  # (210000, 250000)
-  MAX_ITER: 70000  # 270000  # 150ep, 3x for coco
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0008 # * 8
+  STEPS: (166000, 176000)
+  MAX_ITER: 185000  # 120 ep for mhpv2 train with 15403 images
+INPUT:
+  MIN_SIZE_TEST: 640
 TEST:
-  EVAL_PERIOD: 20000
+  EVAL_PERIOD: 10000
   AUG:
-    ENABLED: False
-    MIN_SIZES: [ 384 ]
+    ENABLED: True
+    MIN_SIZES: (640,)
     MAX_SIZE: 1400
     FLIP: True

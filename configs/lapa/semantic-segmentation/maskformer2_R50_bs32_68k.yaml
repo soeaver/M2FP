@@ -1,10 +1,10 @@
-_BASE_: ../Base-LIP-Parsing.yaml
+_BASE_: Base-LaPa-SemanticSegmentation.yaml
 MODEL:
   META_ARCHITECTURE: "MaskFormer"
   SEM_SEG_HEAD:
     NAME: "MaskFormerHead"
     IGNORE_VALUE: 255
-    NUM_CLASSES: 20
+    NUM_CLASSES: 11
     LOSS_WEIGHT: 1.0
     CONVS_DIM: 256
     MASK_DIM: 256
@@ -37,25 +37,12 @@ MODEL:
     OVERSAMPLE_RATIO: 3.0
     IMPORTANCE_SAMPLE_RATIO: 0.75
     TEST:
-      SEMANTIC_ON: False
-      INSTANCE_ON: True
+      SEMANTIC_ON: True
+      INSTANCE_ON: False
       PANOPTIC_ON: False
-      PARSING_ON: True
       OVERLAP_THRESHOLD: 0.8
       OBJECT_MASK_THRESHOLD: 0.8
-      PARSING:
-        WITH_BKG_INSTANCE: True
-        PARSING_INS_SCORE_THR: 0.3
-        METRICS: ("mIoU", "APr")
 SOLVER:
-  IMS_PER_BATCH: 64  # 16
-  BASE_LR: 0.0004  # 0.0001
-  MAX_ITER: 70000  # 270000  # 150ep, 3x for coco
-  LR_SCHEDULER_NAME: "WarmupPolyLR"
-TEST:
-  EVAL_PERIOD: 30000
-  AUG:
-    ENABLED: False
-    MIN_SIZES: [ 384 ]
-    MAX_SIZE: 1400
-    FLIP: True
+  IMS_PER_BATCH: 32
+  BASE_LR: 0.0002
+  MAX_ITER: 68000

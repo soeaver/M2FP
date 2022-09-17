@@ -39,9 +39,9 @@ INPUT:
   SINGLE_HUMAN:
     ENABLED: True # use single human aug
     SIZES: ([384, 512],)
-    SCALE_FACTOR: 0.3
+    SCALE_FACTOR: 0.5   # use saug
     ROTATION: True
-    ROT_FACTOR: 40
+    ROT_FACTOR: 60
 TEST:
   EVAL_PERIOD: 2000
   AUG:

@@ -57,6 +57,7 @@ class MaskFormer(nn.Module):
             with_bkg_instance: bool,
             parsing_ins_score_thr: float,
             iop_thresh: float,
+            num_hier_queries: int,
     ):
         """
         Args:
@@ -111,6 +112,8 @@ class MaskFormer(nn.Module):
         self.with_bkg_instance = with_bkg_instance
         self.parsing_ins_score_thr = parsing_ins_score_thr
         self.iop_thresh = iop_thresh
+
+        self.num_hier_queries = num_hier_queries
 
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
@@ -188,6 +191,7 @@ class MaskFormer(nn.Module):
             "with_bkg_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_BKG_INSTANCE,
             "parsing_ins_score_thr": cfg.MODEL.MASK_FORMER.TEST.PARSING.PARSING_INS_SCORE_THR,
             "iop_thresh": cfg.MODEL.MASK_FORMER.TEST.PARSING.IOP_THR,
+            "num_hier_queries": cfg.MODEL.MASK_FORMER.HIER_QUERIES,
         }
 
     @property
@@ -326,6 +330,8 @@ class MaskFormer(nn.Module):
         mask_cls = F.softmax(mask_cls, dim=-1)[..., :-1]  # discard non-sense category
         mask_pred = mask_pred.sigmoid()
         semseg = torch.einsum("qc,qhw->chw", mask_cls, mask_pred)
+        if self.num_hier_queries:
+            semseg = semseg[:-3, :, :]
         return semseg
 
     def panoptic_inference(self, mask_cls, mask_pred):

@@ -1,0 +1,25 @@
+_BASE_: maskformer2_R50_bs16_185k.yaml
+MODEL:
+  WEIGHTS: "./weights/R-103.pkl"
+  BACKBONE:
+    NAME: "build_resnet_deeplab_backbone"
+  RESNETS:
+    DEPTH: 101
+    STEM_TYPE: "deeplab"
+    STEM_OUT_CHANNELS: 128
+    STRIDE_IN_1X1: False
+    OUT_FEATURES: [ "res2", "res3", "res4", "res5" ]
+    # NORM: "SyncBN"
+    RES5_MULTI_GRID: [ 1, 1, 1 ]  # not used
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0008 # * 8
+  STEPS: (166000, 176000)
+  MAX_ITER: 185000  # 120 ep for mhpv2 train with 15403 images
+INPUT:
+  IMAGE_SIZE: 800  # 1024
+  MIN_SCALE: 0.1
+  MAX_SCALE: 2.0
+  FORMAT: "RGB"
+  DATASET_MAPPER_NAME: "mask_former_parsing_lsj"
+  MIN_SIZE_TEST: 640  # 800

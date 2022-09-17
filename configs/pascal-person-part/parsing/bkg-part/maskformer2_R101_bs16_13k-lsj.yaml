@@ -12,10 +12,12 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [ 1, 1, 1 ]  # not used
 SOLVER:
-  BASE_LR: 0.0002  # 0.0001
-  STEPS: (23400, 24700)  # (0.9, 0.95) * max_iter
-  MAX_ITER: 26000  # ~120ep
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0002 # * 4
+  STEPS: (11700, 12300)
+  MAX_ITER: 13000  # ~120ep
 INPUT:
+  COLOR_AUG_SSD: True
   IMAGE_SIZE: 800  # 1024
   MIN_SCALE: 0.1
   MAX_SCALE: 2.0

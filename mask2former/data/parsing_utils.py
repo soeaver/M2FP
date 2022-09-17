@@ -68,7 +68,7 @@ def gen_parsing_instances(human_png, category_png, with_bkg_instance, with_human
         if with_human_instance:
             human_mask = np.where(human_png == human_id, 1, 0).copy()
             assert np.max(human_mask) == 1, "human {} is missed".format(human_id + 1)
-            human_class = num_parsing + 1
+            human_class = num_parsing
             classes.append(human_class)
             masks.append(human_mask)
 

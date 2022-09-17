@@ -75,16 +75,16 @@ MHPv2_FLIP_MAP = ((5, 6), (7, 8), (22, 23), (24, 25), (26, 27), (28, 29), (30, 3
 
 _PREDEFINED_SPLITS = {
     "mhpv2_parsing_train": (
-        "mhpv2/Training/Images/",
-        "mhpv2/Training/Category_ids/",
-        "mhpv2/Training/Instance_ids/",
-        "mhpv2/Training/Human_ids/",
+        "Training/Images/",
+        "Training/Category_ids/",
+        "Training/Instance_ids/",
+        "Training/Human_ids/",
     ),
     "mhpv2_parsing_val": (
-        "mhpv2/Validation/Images/",
-        "mhpv2/Validation/Category_ids/",
-        "mhpv2/Validation/Instance_ids/",
-        "mhpv2/Validation/Human_ids/",
+        "Validation/Images/",
+        "Validation/Category_ids/",
+        "Validation/Instance_ids/",
+        "Validation/Human_ids/",
     ),
 }
 
@@ -92,7 +92,7 @@ _PREDEFINED_SPLITS = {
 def _get_mhpv2_parsing_meta():
     thing_ids = [k["id"] for k in MHPv2_PARSING_CATEGORIES]
     assert len(thing_ids) == 60, len(thing_ids)
-    # Mapping from the incontiguous CIHP category id to an id in [0, 99]
+    # Mapping from the incontiguous MHPv2 category id to an id in [0, 99]
     thing_dataset_id_to_contiguous_id = {k: i for i, k in enumerate(thing_ids)}
     thing_classes = [k["name"] for k in MHPv2_PARSING_CATEGORIES]
     ret = {
@@ -111,6 +111,7 @@ def _get_mhpv2_parsing_meta():
 
 
 def register_mhpv2_parsing(root):
+    root = os.path.join(root, "mhpv2")
     meta = _get_mhpv2_parsing_meta()
     for name, (image_root, category_gt_root, instance_gt_root, human_gt_root) in _PREDEFINED_SPLITS.items():
         image_root = os.path.join(root, image_root)
@@ -131,6 +132,7 @@ def register_mhpv2_parsing(root):
             evaluator_type="parsing",
             **meta
         )
+
 
 _root = os.getenv("DETECTRON2_DATASETS", "datasets")
 register_mhpv2_parsing(_root)

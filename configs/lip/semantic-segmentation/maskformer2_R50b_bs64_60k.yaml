@@ -43,9 +43,9 @@ MODEL:
       OVERLAP_THRESHOLD: 0.8
       OBJECT_MASK_THRESHOLD: 0.8
 TEST:
-  EVAL_PERIOD: 10000
+  EVAL_PERIOD: 2000
   AUG:
-    ENABLED: True # use flip test
+    ENABLED: False # use flip test
     MIN_SIZES: [384]
     MAX_SIZE: 3584
     FLIP: True

@@ -29,6 +29,29 @@ ATR_SEMSEG_CATEGORIES = [
     'Scarf'
 ]
 
+
+# ATR_SEMSEG_CATEGORIES = [
+#     0, 'Background',
+#     1, 'Hat',    # Head
+#     2, 'Hair',   # Head
+#     3, 'Glass',  # Head
+#     4, 'Up',     # Upper
+#     5, 'Skirt',  # Upper
+#     6, 'Pants',  # Lower
+#     7, 'Dress',  # Upper
+#     8, 'Belt',   # Upper
+#     9, 'L-Shoe', # Lower
+#     10, 'R-Shoe', # Lower
+#     11, 'Face',   # Head
+#     12, 'L-Leg',  # Lower
+#     13, 'R-Leg',  # Lower
+#     14, 'L-Arm',  # Upper
+#     15, 'R-Arm',  # Upper
+#     16, 'Bag',    # Upper
+#     17, 'Scarf'   # Upper
+# ]
+
+
 # ==== Predefined splits for raw ATR images ===========
 _PREDEFINED_SPLITS = {
     "atr_semseg_train": ("Training/Images/", "Training/Category_ids/"),
@@ -36,6 +59,7 @@ _PREDEFINED_SPLITS = {
 }
 
 ATR_FLIP_MAP = ((9, 10), (12, 13), (14, 15))
+ATR_HIER_MAP = {18: (1, 2, 3, 11), 19: (4, 5, 7, 8, 14, 15, 16, 17), 20: (6, 9, 10, 12, 13)}
 
 
 def register_atr_semseg(root):
@@ -52,7 +76,8 @@ def register_atr_semseg(root):
             sem_seg_root=gt_dir,
             evaluator_type="sem_seg",
             ignore_label=255,
-            flip_map=ATR_FLIP_MAP
+            flip_map=ATR_FLIP_MAP,
+            hier_map=ATR_HIER_MAP,
         )
 
 

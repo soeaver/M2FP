@@ -45,6 +45,7 @@ class MaskFormerSemanticHPDatasetMapper:
         flip_map,
         single_human_aug,
         train_size,
+        hier_map,
     ):
         """
         NOTE: this interface is experimental.
@@ -62,6 +63,7 @@ class MaskFormerSemanticHPDatasetMapper:
         self.size_divisibility = size_divisibility
         self.flip_map = flip_map
         self.single_human_aug = single_human_aug
+        self.hier_map = hier_map
 
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
@@ -90,6 +92,8 @@ class MaskFormerSemanticHPDatasetMapper:
                 augs.append(
                     RandomCenterRotation(rot_factor)
                 )
+            if cfg.INPUT.SINGLE_HUMAN.COLOR_AUG_SSD:
+                augs.append(ColorAugSSDTransform(img_format=cfg.INPUT.FORMAT))
         else:
             # for multi person human parsing, e.g. CIHP and MHP
             augs = [
@@ -124,6 +128,10 @@ class MaskFormerSemanticHPDatasetMapper:
             "single_human_aug": cfg.INPUT.SINGLE_HUMAN.ENABLED,
             "train_size": train_size
         }
+        if cfg.MODEL.MASK_FORMER.HIER_QUERIES:
+            ret["hier_map"] = meta.hier_map
+        else:
+            ret["hier_map"] = None
         return ret
 
     def __call__(self, dataset_dict):
@@ -209,11 +217,27 @@ class MaskFormerSemanticHPDatasetMapper:
             classes = np.unique(sem_seg_gt)
             # remove ignored region
             classes = classes[classes != self.ignore_label]
+            if self.hier_map is not None:   # add hier labels
+                hier_classes = []
+                for class_id in self.hier_map.keys():
+                    if len(list(set(self.hier_map[class_id]) & set(classes))):
+                        hier_classes.append(class_id)
+                hier_classes = np.asarray(hier_classes)
+                classes = np.concatenate((classes, hier_classes))
+            else:
+                hier_classes = np.array([])
+            classes = np.concatenate((classes, classes))
             instances.gt_classes = torch.tensor(classes, dtype=torch.int64)
 
             masks = []
             for class_id in classes:
-                masks.append(sem_seg_gt == class_id)
+                if class_id not in hier_classes:
+                    masks.append(sem_seg_gt == class_id)
+                else:   # add hier labels
+                    h_mask = sem_seg_gt == -2   # generate an empty mask
+                    for h_class_id in self.hier_map[class_id]:
+                        h_mask += sem_seg_gt == h_class_id
+                    masks.append(h_mask)
 
             if len(masks) == 0:
                 # Some image does not have annotation (all ignored)

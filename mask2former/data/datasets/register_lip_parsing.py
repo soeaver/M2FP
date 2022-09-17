@@ -6,7 +6,7 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 from .parsing import load_parsing
 
 
-CIHP_PARSING_CATEGORIES = [
+LIP_PARSING_CATEGORIES = [
     {"id": 0, "name": "Background"},
     {"id": 1, "name": "Hat"},
     {"id": 2, "name": "Hair"},
@@ -17,7 +17,7 @@ CIHP_PARSING_CATEGORIES = [
     {"id": 7, "name": "Coat"},
     {"id": 8, "name": "Socks"},
     {"id": 9, "name": "Pants"},
-    {"id": 10, "name": "Torso-skin"},
+    {"id": 10, "name": "Jumpsuits"},
     {"id": 11, "name": "Scarf"},
     {"id": 12, "name": "Skirt"},
     {"id": 13, "name": "Face"},
@@ -30,18 +30,17 @@ CIHP_PARSING_CATEGORIES = [
     {"id": 20, "name": "Human"}
 ]
 
-
-CIHP_FLIP_MAP = ((14, 15), (16, 17), (18, 19))
-
+# ==== Predefined splits for raw LIP images ===========
+LIP_FLIP_MAP = ((14, 15), (16, 17), (18, 19))
 
 _PREDEFINED_SPLITS = {
-    "cihp_parsing_train": (
+    "lip_parsing_train": (
         "Training/Images/",
         "Training/Category_ids/",
         "Training/Instance_ids/",
         "Training/Human_ids/",
     ),
-    "cihp_parsing_val": (
+    "lip_parsing_val": (
         "Validation/Images/",
         "Validation/Category_ids/",
         "Validation/Instance_ids/",
@@ -50,16 +49,16 @@ _PREDEFINED_SPLITS = {
 }
 
 
-def _get_cihp_parsing_meta():
-    thing_ids = [k["id"] for k in CIHP_PARSING_CATEGORIES]
+def _get_lip_parsing_meta():
+    thing_ids = [k["id"] for k in LIP_PARSING_CATEGORIES]
     assert len(thing_ids) == 21, len(thing_ids)
-    # Mapping from the incontiguous CIHP category id to an id in [0, 99]
+    # Mapping from the incontiguous LIP category id to an id in [0, 19]
     thing_dataset_id_to_contiguous_id = {k: i for i, k in enumerate(thing_ids)}
-    thing_classes = [k["name"] for k in CIHP_PARSING_CATEGORIES]
+    thing_classes = [k["name"] for k in LIP_PARSING_CATEGORIES]
     ret = {
         "thing_dataset_id_to_contiguous_id": thing_dataset_id_to_contiguous_id,
         "thing_classes": thing_classes,
-        "flip_map": CIHP_FLIP_MAP,
+        "flip_map": LIP_FLIP_MAP,
         "num_parsing": 20,
         "semseg": {
             "semseg_format": "mask",
@@ -71,9 +70,9 @@ def _get_cihp_parsing_meta():
     return ret
 
 
-def register_cihp_parsing(root):
-    root = os.path.join(root, "cihp")
-    meta = _get_cihp_parsing_meta()
+def register_lip_parsing(root):
+    root = os.path.join(root, "lip")
+    meta = _get_lip_parsing_meta()
     for name, (image_root, category_gt_root, instance_gt_root, human_gt_root) in _PREDEFINED_SPLITS.items():
         image_root = os.path.join(root, image_root)
         category_gt_root = os.path.join(root, category_gt_root)
@@ -96,4 +95,4 @@ def register_cihp_parsing(root):
 
 
 _root = os.getenv("DETECTRON2_DATASETS", "datasets")
-register_cihp_parsing(_root)
+register_lip_parsing(_root)
