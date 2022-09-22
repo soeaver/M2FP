@@ -22,6 +22,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
 from .parsing_eval import ParsingEval
+from ..utils.utils import predictions_merge, predictions_supress
 
 
 class ParsingEvaluator(DatasetEvaluator):
@@ -31,7 +32,7 @@ class ParsingEvaluator(DatasetEvaluator):
             distributed=True,
             output_dir=None,
             *,
-            parsing_metrics=('mIoU', 'APp', 'APr', 'APh'),
+            parsing_metrics=("mIoU", "APp", "APr", "APh"),
     ):
         """
 
@@ -63,36 +64,63 @@ class ParsingEvaluator(DatasetEvaluator):
 
     def process(self, inputs, outputs):
 
-        output_dict = outputs[-1]['parsing']
+        output_dict = outputs[-1]["parsing"]
 
         image_name = inputs[0]["file_name"].split("/")[-1].split(".")[0]
         output_root = self._output_dir
-        image_shape = (inputs[0]['height'], inputs[0]['width'])
+        image_shape = (inputs[0]["height"], inputs[0]["width"])
 
-        # semseg_predictions
-        semseg_path = os.path.join(output_root, 'semantic')
+        # prepare semantic, part and human prediction
+        semseg_path = os.path.join(output_root, "semantic")
         os.makedirs(semseg_path, exist_ok=True)
 
-        semseg_img = output_dict["semseg_outputs"].argmax(dim=0).cpu().numpy()
-        semseg_name = os.path.join(semseg_path, image_name + '.png')
-        cv2.imwrite(semseg_name, semseg_img)
-
-        # part predictions
-        part_path = os.path.join(output_root, 'part')
+        part_path = os.path.join(output_root, "part")
         os.makedirs(part_path, exist_ok=True)
-
-        pasted_part_image = np.zeros(image_shape, dtype=np.uint8)
+        part_png = np.zeros(image_shape, dtype=np.uint8)
         part_info = []
 
+        human_path = os.path.join(output_root, "human")
+        os.makedirs(human_path, exist_ok=True)
+        human_png = np.zeros(image_shape, dtype=np.uint8)
+        human_info = []
+
+        # prepare category labels and probs
+        semseg_probs = output_dict["semseg_outputs"]
+        global_ins_scores_map = output_dict["ins_scores_map"].cpu().numpy()
+        global_category_labels = copy.deepcopy(semseg_probs).argmax(dim=0).cpu().numpy()
+
+        human_ins_preds = output_dict["human_outputs"]
+
+        # prepare human ids
+        human_ids_map = np.zeros(image_shape, dtype=np.uint8)
+        human_scores = []
+        sorted_human_idx = np.array([_s["score"] for _s in human_ins_preds]).argsort().tolist()
+        human_ins_id = 1
+        for human_idx in sorted_human_idx:
+            human_output = output_dict["human_outputs"][human_idx]
+            if human_output["score"] < 0.:
+                continue
+            human_ids_map = np.where(human_output["mask"].numpy() > 0, human_ins_id, human_ids_map)
+            human_scores.append(human_output["score"])
+            human_ins_id += 1
+
+        human_ids = np.unique(human_ids_map)
+        bg_id_index = np.where(human_ids == 0)[0]
+        human_ids = np.delete(human_ids, bg_id_index)
+
+        # calculate prediction
+        # semantic prediction
+        semseg_png = copy.deepcopy(semseg_probs).argmax(dim=0).cpu().numpy()
+
+        # part predictions
         sorted_part_id = np.array([_s['score'] for _s in output_dict['part_outputs']]).argsort()
         for _num_part, part_id in enumerate(sorted_part_id):
-            # part_id starts from 0
             part_output = output_dict['part_outputs'][part_id]
             # reserve id 0 for background
-            if _num_part >= 255:  # need to check
-                pasted_part_image = np.where(part_output['mask'] > 0, 0, pasted_part_image)
+            if _num_part >= 255:
+                part_png = np.where(part_output['mask'] > 0, 0, part_png)
             else:
-                pasted_part_image = np.where(part_output['mask'] > 0, _num_part + 1, pasted_part_image)
+                part_png = np.where(part_output['mask'] > 0, _num_part + 1, part_png)
             part_info_tmp = {
                 'img_name': image_name,
                 'category_id': part_output["category_id"],
@@ -101,46 +129,63 @@ class ParsingEvaluator(DatasetEvaluator):
             }
             part_info.append(part_info_tmp)
 
-        cv2.imwrite(os.path.join(part_path, '{}.png'.format(image_name)), pasted_part_image)
-        part_name = os.path.join(part_path, '{}.json'.format(image_name))
-        json.dump(part_info, open(part_name, 'w'))
+        part_info = filter_out_covered_ins_info(part_info, part_png)
 
-        # human predictions
-        human_path = os.path.join(output_root, 'human')
-        os.makedirs(human_path, exist_ok=True)
+        # human & parsing prediction
+        total_human_num = 1
+        for human_id in human_ids:
+            # human prediction
+            human_score = human_scores[human_id - 1]
+            human_png = np.where(human_ids_map == human_id, total_human_num, human_png)
 
-        pasted_human_image = np.zeros(image_shape, dtype=np.uint8)
-        human_info = []
+            human_info.append(
+                {
+                    "img_name": image_name,
+                    "score": human_score,
+                    "human_id": total_human_num
+                }
+            )
+            total_human_num += 1
 
-        sorted_human_id = np.array([_s['score'] for _s in output_dict['human_outputs']]).argsort()
-        for _num_human, human_id in enumerate(sorted_human_id):
-            # human_id starts from 0
-            human_output = output_dict['human_outputs'][human_id]
-            # reserve id 0 for background
-            if _num_human >= 255:
-                pasted_human_image = np.where(human_output['mask'] > 0, 0, pasted_human_image)
-            else:
-                pasted_human_image = np.where(human_output['mask'] > 0, _num_human + 1, pasted_human_image)
-            human_info_tmp = {
-                'img_name': image_name,
-                'category_id': human_output["category_id"],
-                'score': human_output["score"],
-                'human_id': int(_num_human + 1),
-            }
-            human_info.append(human_info_tmp)
+            # parsing prediction
+            human_ins_scores_map = (np.where(human_ids_map == human_id, 1, 0) * global_ins_scores_map)
+            human_part_label = (np.where(human_ids_map == human_id, 1, 0) * global_category_labels).astype(np.uint8)
+            human_part_classes = np.unique(human_part_label)
 
-        cv2.imwrite(os.path.join(human_path, '{}.png'.format(image_name)), pasted_human_image)
-        human_name = os.path.join(human_path, '{}.json'.format(image_name))
-        json.dump(human_info, open(human_name, 'w'))
+            _scores_for_parsing = []
+            for part_id in human_part_classes:
+                # part ins scores
+                part_ins_scores_map = human_ins_scores_map[part_id, :, :]
+                part_ins_scores = np.unique(part_ins_scores_map)
+                bg_id_index = np.where(part_ins_scores == 0)[0]
+                part_ins_scores = np.delete(part_ins_scores, bg_id_index)
 
-        # parsing predictions
-        for parsing_output in output_dict["parsing_outputs"]:
-            parsing_prediction = {}
-            parsing_prediction["img_name"] = image_name
-            parsing_prediction['parsing'] = csr_matrix(parsing_output["parsing"].numpy())
-            parsing_prediction['score'] = parsing_output["instance_score"]
-            if len(parsing_prediction) > 1:
-                self._parsing_predictions.append(parsing_prediction)
+                if part_ins_scores.shape[0] == 0:
+                    part_score = 0
+                else:
+                    part_score = np.max(part_ins_scores)
+
+                if part_score > 0:
+                    _scores_for_parsing.append(part_score)
+
+            mean_part_score = np.mean(np.asarray(_scores_for_parsing))
+            parsing_score = np.power(np.power(mean_part_score, 1) * np.power(human_score, 2), 1 / (1 + 2))
+            self._parsing_predictions.append(
+                {
+                    "img_name": image_name,
+                    "parsing": csr_matrix(human_part_label),
+                    "score": parsing_score
+                }
+            )
+
+        # save semantic, part and human prediction
+        cv2.imwrite(os.path.join(semseg_path, image_name + ".png"), semseg_png)
+
+        cv2.imwrite(os.path.join(part_path, "{}.png".format(image_name)), part_png)
+        json.dump(part_info, open(os.path.join(part_path, "{}.json".format(image_name)), "w"))
+
+        cv2.imwrite(os.path.join(human_path, "{}.png".format(image_name)), human_png)
+        json.dump(human_info, open(os.path.join(human_path, "{}.json".format(image_name)), "w"))
 
     def evaluate(self):
         """
@@ -171,8 +216,10 @@ class ParsingEvaluator(DatasetEvaluator):
 
         eval_res = self._eval_parsing_predictions(parsing_prediction)
 
-        self._results["mIoU"] = eval_res["mIoU"]
-        self._results["APr"]  = np.nanmean(np.array(list(eval_res["APr"].values())))
+        if "mIoU" in self.metrics:
+            self._results["mIoU"] = eval_res["mIoU"]
+        if "APr" in self.metrics:
+            self._results["APr"]  = np.nanmean(np.array(list(eval_res["APr"].values())))
         if "APh" in self.metrics:
             self._results["APh"]  = np.nanmean(np.array(list(eval_res["APh"].values())))
         if "APp" in self.metrics:
@@ -222,3 +269,16 @@ def _evaluate_predictions_for_parsing(
     parsing_eval.summarize()
 
     return eval_res
+
+
+def filter_out_covered_ins_info(info_list, map):
+    filtered_info_list = []
+    for info in info_list:
+        idx = info["part_id"]
+
+        mask = np.where(map == idx, 1, 0)
+        if np.max(mask) == 0:
+            continue
+        else:
+            filtered_info_list.append(info)
+    return filtered_info_list

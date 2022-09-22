@@ -321,6 +321,35 @@ class ParsingEval(object):
             AP[k] = self._voc_ap(recall, precision, False)
         return AP
 
+    def get_parsing_preds(self):
+        parsings = []
+        scores = []
+        image_names = []
+
+        tmp_parsing_dir = os.path.join(self.pred_dir, 'parsing')
+        img_name_list = [x.split("/")[-1].split(".")[0] for x in
+                         glob.glob(os.path.join(tmp_parsing_dir, 'info') + '/*') if x[-4:] == 'json']
+
+        for img_name in img_name_list:
+            info_path = os.path.join(tmp_parsing_dir, 'info', img_name) + '.json'
+            parsing_path = os.path.join(tmp_parsing_dir, 'parsing', img_name) + '.png'
+            ids_path = os.path.join(tmp_parsing_dir, 'ids', img_name) + '.png'
+
+            parsing_categories = cv2.imread(parsing_path, 0)
+            parsing_ids = cv2.imread(ids_path, 0)
+
+            with open(info_path, 'r') as f:
+                parsing_info_dict = json.load(f)
+                for parsing_info in parsing_info_dict:
+                    id_mask = np.where(parsing_ids == parsing_info['parsing_id'], 1, 0)
+                    parsing = np.where(id_mask == 1, parsing_categories, 0)
+
+                    image_names.append(img_name)
+                    scores.append(parsing_info['score'])
+                    parsings.append(parsing)
+
+        return image_names, scores, parsings
+
     def computeAPp(self):
         self._logger.info('Evaluating AP^p and PCP')
         class_recs_temp, npos = self._prepare_APp()
@@ -335,6 +364,7 @@ class ParsingEval(object):
             image_names.append(p['img_name'])
         scores = np.array(scores)
         sorted_ind = np.argsort(-scores)
+
 
         nd = len(image_names)
         tp_seg = [np.zeros(nd) for _ in range(len(self.par_thresholds))]
@@ -369,7 +399,7 @@ class ParsingEval(object):
                     if not R[j]['det'][jmax]:
                         tp_seg[j][d] = 1.
                         R[j]['det'][jmax] = 1
-                        pcp_d = len(mask_gt_u[np.logical_and(mask_gt_u > 0, mask_gt_u < self.num_parsing)])
+                        pcp_d = len(mask_gt_u[np.logical_and(mask_gt_u > 0, mask_gt_u < self.num_parsing)])  # gt有多少part
                         pcp_n = float(np.sum(seg_iou_max[1:] > self.par_thresholds[j]))
                         if pcp_d > 0:
                             pcp_list[j].append(pcp_n / pcp_d)
@@ -391,6 +421,7 @@ class ParsingEval(object):
             APp = self._voc_ap(rec_seg, prec_seg)
             all_APp[thre] = APp
 
+            # np.max(tp_seg[j]), len(pcp_list[j]): 当前阈值下有多少tp
             assert (np.max(tp_seg[j]) == len(pcp_list[j])), "%d vs %d" % (np.max(tp_seg[j]), len(pcp_list[j]))
             pcp_list[j].extend([0.0] * (npos - len(pcp_list[j])))
             PCP = np.mean(pcp_list[j])
@@ -451,7 +482,7 @@ class ParsingEval(object):
             with open(os.path.join(self.pred_dir, "human", img_name + ".json"), 'r') as f:
                 human_pred_dict = json.load(f)
                 for pred in human_pred_dict:
-                    pred['mask'] = np.where(human_pred_image == pred['part_id'], 1, 0)
+                    pred['mask'] = np.where(human_pred_image == pred['human_id'], 1, 0)
                     human_pred_im.append(pred)
 
             n_pre_inst = len(human_pred_im)
