@@ -1,4 +1,4 @@
-_BASE_: maskformer2_R50_bs16_13k.yaml
+_BASE_: maskformer2_R50_bs16_16k.yaml
 MODEL:
   WEIGHTS: "./weights/R-103.pkl"
   BACKBONE:
@@ -13,11 +13,12 @@ MODEL:
     RES5_MULTI_GRID: [ 1, 1, 1 ]  # not used
 SOLVER:
   IMS_PER_BATCH: 16
-  BASE_LR: 0.0002 # * 4
-  STEPS: (11700, 12300)
-  MAX_ITER: 13000  # ~120ep
+  BASE_LR: 0.0002 # * 2
+  STEPS: (14400, 15200)
+  MAX_ITER: 16000  # 150 ep for ppp train with 1716 images
 INPUT:
   COLOR_AUG_SSD: True
+  ROTATION: 40
   IMAGE_SIZE: 800  # 1024
   MIN_SCALE: 0.1
   MAX_SCALE: 2.0

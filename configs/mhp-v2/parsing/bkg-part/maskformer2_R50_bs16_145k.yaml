@@ -51,15 +51,15 @@ MODEL:
         IOP_THR: 0.3
 SOLVER:
   IMS_PER_BATCH: 16
-  BASE_LR: 0.0008 # * 8
-  STEPS: (166000, 176000)
-  MAX_ITER: 185000  # 120 ep for mhpv2 train with 15403 images
+  BASE_LR: 0.0008
+  STEPS: (130000, 137500)
+  MAX_ITER: 145000  # 150 ep for mhpv2 train with 15403 images
 INPUT:
   MIN_SIZE_TEST: 640
 TEST:
   EVAL_PERIOD: 10000
   AUG:
-    ENABLED: True
+    ENABLED: False
     MIN_SIZES: (640,)
     MAX_SIZE: 1400
     FLIP: True

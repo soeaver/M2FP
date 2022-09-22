@@ -108,6 +108,7 @@ def add_maskformer2_config(cfg):
     cfg.INPUT.IMAGE_SIZE = 1024
     cfg.INPUT.MIN_SCALE = 0.1
     cfg.INPUT.MAX_SCALE = 2.0
+    cfg.INPUT.ROTATION = 0
 
     # single human parsing aug
     cfg.INPUT.SINGLE_HUMAN = CN()

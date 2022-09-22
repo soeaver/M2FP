@@ -17,6 +17,7 @@ from detectron2.structures import BitMasks, Instances
 from pycocotools import mask as coco_mask
 
 from ..parsing_utils import read_semseg_gt, gen_parsing_instances
+from ..transforms.augmentation_impl import RandomCenterRotation
 
 
 __all__ = ["MaskFormerParsingLSJDatasetMapper"]
@@ -63,6 +64,9 @@ def build_transform_gen(cfg, is_train):
 
     if cfg.INPUT.COLOR_AUG_SSD:
         augmentation.append(ColorAugSSDTransform(img_format=cfg.INPUT.FORMAT))
+
+    if cfg.INPUT.ROTATION:
+        augmentation.append(RandomCenterRotation(cfg.INPUT.ROTATION))
 
     augmentation.extend([
         T.ResizeScale(

@@ -1,10 +1,10 @@
-_BASE_: ../Base-CIHP-Parsing.yaml
+_BASE_: ../Base-PASCAL-PERSON-PART-Parsing.yaml
 MODEL:
   META_ARCHITECTURE: "MaskFormer"
   SEM_SEG_HEAD:
     NAME: "MaskFormerHead"
     IGNORE_VALUE: 255
-    NUM_CLASSES: 20
+    NUM_CLASSES: 7
     LOSS_WEIGHT: 1.0
     CONVS_DIM: 256
     MASK_DIM: 256
@@ -51,15 +51,15 @@ MODEL:
         IOP_THR: 0.3
 SOLVER:
   IMS_PER_BATCH: 16
-  BASE_LR: 0.0008 # * 8
-  STEPS: (166000, 176000)
-  MAX_ITER: 185000  # 120 ep for mhpv2 train with 15403 images
+  BASE_LR: 0.0002 # * 2
+  STEPS: (14400, 15200)
+  MAX_ITER: 16000  # 150 ep for ppp train with 1716 images
 INPUT:
   MIN_SIZE_TEST: 640
 TEST:
-  EVAL_PERIOD: 10000
+  EVAL_PERIOD: 1000
   AUG:
-    ENABLED: True
+    ENABLED: False
     MIN_SIZES: (640,)
     MAX_SIZE: 1400
     FLIP: True

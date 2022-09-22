@@ -18,9 +18,9 @@ DATASETS:
   TEST: ("pascal_person_part_parsing_test",)
 SOLVER:
   IMS_PER_BATCH: 16
-  BASE_LR: 0.0002 # * 4
-  STEPS: (11700, 12300)
-  MAX_ITER: 13000  # ~120ep
+  BASE_LR: 0.0002 # * 2
+  STEPS: (14400, 15200)
+  MAX_ITER: 16000  # 150 ep for ppp train with 1716 images
   WARMUP_FACTOR: 0.000001
   WARMUP_ITERS: 500
   WEIGHT_DECAY: 0.05
