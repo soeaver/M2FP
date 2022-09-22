@@ -48,7 +48,6 @@ MODEL:
         WITH_BKG_INSTANCE: True
         METRICS: ("mIoU", "APr")
         PARSING_INS_SCORE_THR: 0.3
-        IOP_THR: 0.3
 SOLVER:
   IMS_PER_BATCH: 16
   BASE_LR: 0.0008

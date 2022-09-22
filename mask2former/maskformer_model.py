@@ -56,7 +56,6 @@ class MaskFormer(nn.Module):
             with_human_instance: bool,
             with_bkg_instance: bool,
             parsing_ins_score_thr: float,
-            iop_thresh: float,
     ):
         """
         Args:
@@ -110,7 +109,6 @@ class MaskFormer(nn.Module):
         self.with_human_instance = with_human_instance
         self.with_bkg_instance = with_bkg_instance
         self.parsing_ins_score_thr = parsing_ins_score_thr
-        self.iop_thresh = iop_thresh
 
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
@@ -187,7 +185,6 @@ class MaskFormer(nn.Module):
             "with_human_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_HUMAN_INSTANCE,
             "with_bkg_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_BKG_INSTANCE,
             "parsing_ins_score_thr": cfg.MODEL.MASK_FORMER.TEST.PARSING.PARSING_INS_SCORE_THR,
-            "iop_thresh": cfg.MODEL.MASK_FORMER.TEST.PARSING.IOP_THR,
         }
 
     @property
@@ -359,7 +356,6 @@ class MaskFormer(nn.Module):
 
         # semantic result
         semantic_res, ins_scores_map = self.paste_instance_to_semseg_probs(bkg_part_labels, bkg_part_scores, bkg_part_masks)
-        # semantic_res = self.paste_instance_to_semseg_probs(bkg_part_labels, bkg_part_scores, bkg_part_masks)
 
         # part instances
         part_index = torch.where(bkg_part_labels != 0)[0]

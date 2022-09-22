@@ -22,7 +22,6 @@ from detectron2.data import MetadataCatalog
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
 from .parsing_eval import ParsingEval
-from ..utils.utils import predictions_merge, predictions_supress
 
 
 class ParsingEvaluator(DatasetEvaluator):
@@ -60,7 +59,6 @@ class ParsingEvaluator(DatasetEvaluator):
 
     def reset(self):
         self._parsing_predictions = []
-
 
     def process(self, inputs, outputs):
 
@@ -169,7 +167,8 @@ class ParsingEvaluator(DatasetEvaluator):
                     _scores_for_parsing.append(part_score)
 
             mean_part_score = np.mean(np.asarray(_scores_for_parsing))
-            parsing_score = np.power(np.power(mean_part_score, 1) * np.power(human_score, 2), 1 / (1 + 2))
+            parsing_score = mean_part_score * human_score
+
             self._parsing_predictions.append(
                 {
                     "img_name": image_name,
