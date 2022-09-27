@@ -144,7 +144,7 @@ class ParsingEvaluator(DatasetEvaluator):
 
             human_part_probs = (np.where(human_ids_map == human_id, 1, 0) * (semantic_probs.cpu().numpy()))
             human_parsing_probs = np.max(human_part_probs, 0)
-            human_hcm = np.where(human_parsing_probs > 0.2, 1, 0)
+            human_hcm = np.where(human_parsing_probs > 0.8, 1, 0)
             parsing_score = np.sum(human_parsing_probs * human_hcm) / np.sum(human_hcm)
 
             parsing_score *= human_score
