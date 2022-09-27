@@ -177,7 +177,6 @@ class ParsingWithTTA(nn.Module):
 
                 else:
                     semantic_predictions = model_out["semantic_outputs"]
-                    # ins_scores_map = model_out["ins_scores_map"]
                     part_predictions = model_out["part_outputs"]
                     human_predictions = model_out["human_outputs"]
 

@@ -391,7 +391,6 @@ class MaskFormer(nn.Module):
 
         return {
             "semantic_outputs": semantic_res.cpu(),
-            "ins_scores_map": torch.zeros_like(semantic_res, device=semantic_res.device),
             "part_outputs": part_instance_res,
             "human_outputs": human_instance_res,
         }
