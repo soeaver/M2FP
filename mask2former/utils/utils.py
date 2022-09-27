@@ -159,7 +159,7 @@ def predictions_supress(catdict_in, score_thr=0.3):
                 {
                     "category_id": k,
                     "score": _s,
-                    "mask": np.array(_m),
+                    "mask": torch.from_numpy(_m),
                 }
             )
     return merged_output

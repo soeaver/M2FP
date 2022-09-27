@@ -15,6 +15,7 @@ from scipy.sparse import csr_matrix
 import pycocotools.mask as mask_util
 
 import torch
+import torch.nn.functional as F
 from torchvision.datasets.coco import CocoDetection
 
 import detectron2.utils.comm as comm
@@ -71,25 +72,21 @@ class ParsingEvaluator(DatasetEvaluator):
         # prepare semantic, part and human prediction
         semseg_path = os.path.join(output_root, "semantic")
         os.makedirs(semseg_path, exist_ok=True)
-
         part_path = os.path.join(output_root, "part")
         os.makedirs(part_path, exist_ok=True)
         part_png = np.zeros(image_shape, dtype=np.uint8)
         part_info = []
-
         human_path = os.path.join(output_root, "human")
         os.makedirs(human_path, exist_ok=True)
         human_png = np.zeros(image_shape, dtype=np.uint8)
         human_info = []
 
         # prepare category labels and probs
-        semseg_probs = output_dict["semseg_outputs"]
-        global_ins_scores_map = output_dict["ins_scores_map"].cpu().numpy()
-        global_category_labels = copy.deepcopy(semseg_probs).argmax(dim=0).cpu().numpy()
-
-        human_ins_preds = output_dict["human_outputs"]
+        semantic_probs = output_dict["semantic_outputs"]
+        global_category_labels = copy.deepcopy(semantic_probs).argmax(dim=0).cpu().numpy()
 
         # prepare human ids
+        human_ins_preds = output_dict["human_outputs"]
         human_ids_map = np.zeros(image_shape, dtype=np.uint8)
         human_scores = []
         sorted_human_idx = np.array([_s["score"] for _s in human_ins_preds]).argsort().tolist()
@@ -101,14 +98,13 @@ class ParsingEvaluator(DatasetEvaluator):
             human_ids_map = np.where(human_output["mask"].numpy() > 0, human_ins_id, human_ids_map)
             human_scores.append(human_output["score"])
             human_ins_id += 1
-
         human_ids = np.unique(human_ids_map)
         bg_id_index = np.where(human_ids == 0)[0]
         human_ids = np.delete(human_ids, bg_id_index)
 
         # calculate prediction
         # semantic prediction
-        semseg_png = copy.deepcopy(semseg_probs).argmax(dim=0).cpu().numpy()
+        semseg_png = copy.deepcopy(semantic_probs).argmax(dim=0).cpu().numpy()
 
         # part predictions
         sorted_part_id = np.array([_s['score'] for _s in output_dict['part_outputs']]).argsort()
@@ -126,7 +122,6 @@ class ParsingEvaluator(DatasetEvaluator):
                 'part_id': int(_num_part + 1),
             }
             part_info.append(part_info_tmp)
-
         part_info = filter_out_covered_ins_info(part_info, part_png)
 
         # human & parsing prediction
@@ -135,7 +130,6 @@ class ParsingEvaluator(DatasetEvaluator):
             # human prediction
             human_score = human_scores[human_id - 1]
             human_png = np.where(human_ids_map == human_id, total_human_num, human_png)
-
             human_info.append(
                 {
                     "img_name": image_name,
@@ -146,28 +140,14 @@ class ParsingEvaluator(DatasetEvaluator):
             total_human_num += 1
 
             # parsing prediction
-            human_ins_scores_map = (np.where(human_ids_map == human_id, 1, 0) * global_ins_scores_map)
             human_part_label = (np.where(human_ids_map == human_id, 1, 0) * global_category_labels).astype(np.uint8)
-            human_part_classes = np.unique(human_part_label)
 
-            _scores_for_parsing = []
-            for part_id in human_part_classes:
-                # part ins scores
-                part_ins_scores_map = human_ins_scores_map[part_id, :, :]
-                part_ins_scores = np.unique(part_ins_scores_map)
-                bg_id_index = np.where(part_ins_scores == 0)[0]
-                part_ins_scores = np.delete(part_ins_scores, bg_id_index)
+            human_part_probs = (np.where(human_ids_map == human_id, 1, 0) * (semantic_probs.cpu().numpy()))
+            human_parsing_probs = np.max(human_part_probs, 0)
+            human_hcm = np.where(human_parsing_probs > 0.2, 1, 0)
+            parsing_score = np.sum(human_parsing_probs * human_hcm) / np.sum(human_hcm)
 
-                if part_ins_scores.shape[0] == 0:
-                    part_score = 0
-                else:
-                    part_score = np.max(part_ins_scores)
-
-                if part_score > 0:
-                    _scores_for_parsing.append(part_score)
-
-            mean_part_score = np.mean(np.asarray(_scores_for_parsing))
-            parsing_score = mean_part_score * human_score
+            parsing_score *= human_score
 
             self._parsing_predictions.append(
                 {

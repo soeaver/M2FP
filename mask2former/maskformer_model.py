@@ -321,8 +321,9 @@ class MaskFormer(nn.Module):
 
     def instance_parsing_inference(self, mask_cls, mask_pred):
         scores = F.softmax(mask_cls, dim=-1)[:, :-1]
-        labels = torch.arange(self.sem_seg_head.num_classes, device=self.device).unsqueeze(0).repeat(self.num_queries,
-                                                                                                     1).flatten(0, 1)
+        labels = torch.arange(
+            self.sem_seg_head.num_classes, device=self.device
+        ).unsqueeze(0).repeat(self.num_queries, 1).flatten(0, 1)
 
         scores_per_image, topk_indices = scores.flatten(0, 1).topk(self.test_topk_per_image, sorted=False)
         labels_per_image = labels[topk_indices]
@@ -355,7 +356,9 @@ class MaskFormer(nn.Module):
         human_masks = pred_masks[human_index, :, :]
 
         # semantic result
-        semantic_res, ins_scores_map = self.paste_instance_to_semseg_probs(bkg_part_labels, bkg_part_scores, bkg_part_masks)
+        semantic_res = self.paste_instance_to_semantic_probs(
+            bkg_part_labels, bkg_part_scores, bkg_part_masks
+        )
 
         # part instances
         part_index = torch.where(bkg_part_labels != 0)[0]
@@ -387,13 +390,13 @@ class MaskFormer(nn.Module):
                 )
 
         return {
-            "semseg_outputs": semantic_res,
-            "ins_scores_map": ins_scores_map,
+            "semantic_outputs": semantic_res.cpu(),
+            "ins_scores_map": torch.zeros_like(semantic_res, device=semantic_res.device),
             "part_outputs": part_instance_res,
             "human_outputs": human_instance_res,
         }
 
-    def paste_instance_to_semseg_probs(self, labels, scores, mask_probs):
+    def paste_instance_to_semantic_probs(self, labels, scores, mask_probs):
         im_h, im_w = mask_probs.shape[-2:]
 
         # get bkg prob map
@@ -403,12 +406,9 @@ class MaskFormer(nn.Module):
             bkg_scores = scores[bkg_inds]
             bkg_mask_probs = mask_probs[bkg_inds, :, :].sigmoid()
 
-            r = self.paste_category_probs(bkg_scores, bkg_mask_probs, im_h, im_w)
-            semseg_im = [r[0]]
-            ins_scores_map = [r[1]]
+            semseg_im = [self.paste_category_probs(bkg_scores, bkg_mask_probs, im_h, im_w)]
         else:
             semseg_im = [torch.zeros((im_h, im_w), dtype=torch.float32, device=mask_probs.device) + 1e-6]
-            ins_scores_map = [torch.zeros((im_h, im_w), dtype=torch.float32, device=mask_probs.device)]
 
         # get part prob maps
         for cls_ind in range(1, self.metadata.num_parsing):
@@ -416,16 +416,13 @@ class MaskFormer(nn.Module):
             cate_scores = scores[cate_inds]
             cate_mask_probs = mask_probs[cate_inds, :, :].sigmoid()
 
-            r = self.paste_category_probs(cate_scores, cate_mask_probs, im_h, im_w)
-            semseg_im.append(r[0])
-            ins_scores_map.append(r[1])
+            semseg_im.append(self.paste_category_probs(cate_scores, cate_mask_probs, im_h, im_w))
 
-        return torch.stack(semseg_im, dim=0).cpu(), torch.stack(ins_scores_map, dim=0).cpu()
+        return torch.stack(semseg_im, dim=0).cpu()
 
     def paste_category_probs(self, scores, mask_probs, h, w):
         category_probs = torch.zeros((h, w), dtype=torch.float32, device=mask_probs.device)
         paste_times = torch.zeros((h, w), dtype=torch.float32, device=mask_probs.device)
-        ins_scores_cate = torch.zeros((h, w), dtype=torch.float32, device=mask_probs.device)
 
         index = scores.argsort()
         for k in range(len(index)):
@@ -434,14 +431,11 @@ class MaskFormer(nn.Module):
             ins_mask_probs = mask_probs[index[k], :, :] * scores[index[k]]
             category_probs = torch.where(ins_mask_probs > 0.5, ins_mask_probs + category_probs, category_probs)
             paste_times += torch.where(ins_mask_probs > 0.5, 1, 0)
-            ins_scores_cate = torch.where(
-                ins_mask_probs > 0.5, torch.max(scores[index[k]], ins_scores_cate), ins_scores_cate
-            )
 
         paste_times = torch.where(paste_times == 0, paste_times + 1, paste_times)
         category_probs /= paste_times
 
-        return [category_probs, ins_scores_cate]
+        return category_probs
 
     def get_human_parsing(self, human_score, human_mask, part_scores, part_labels, part_masks):
         im_h, im_w = part_masks.shape[-2:]

@@ -365,7 +365,6 @@ class ParsingEval(object):
         scores = np.array(scores)
         sorted_ind = np.argsort(-scores)
 
-
         nd = len(image_names)
         tp_seg = [np.zeros(nd) for _ in range(len(self.par_thresholds))]
         fp_seg = [np.zeros(nd) for _ in range(len(self.par_thresholds))]
