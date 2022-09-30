@@ -13,8 +13,7 @@ from detectron2.data import transforms as T
 from detectron2.projects.point_rend import ColorAugSSDTransform
 from detectron2.structures import BitMasks, Instances
 
-from ..parsing_utils import read_semseg_gt, flip_human_semantic_category, \
-    center_to_target_size_semantic, affine_to_target_size
+from ..parsing_utils import read_semseg_gt, flip_human_semantic_category, center_to_target_size_semantic
 from ..transforms.augmentation_impl import ResizeByAspectRatio, ResizeByScale, RandomCenterRotation
 
 __all__ = ["MaskFormerSemanticHPDatasetMapper"]

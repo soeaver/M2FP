@@ -44,7 +44,6 @@ class MaskFormerParsingDatasetMapper:
         num_parsing,
         flip_map,
         with_human_instance,
-        with_bkg_instance,
     ):
         """
         NOTE: this interface is experimental.
@@ -61,7 +60,6 @@ class MaskFormerParsingDatasetMapper:
         self.num_parsing = num_parsing
         self.flip_map = flip_map
         self.with_human_instance = with_human_instance
-        self.with_bkg_instance = with_bkg_instance
 
         assert self.is_train, "MaskFormerParsingDatasetMapper should only be used for training!"
         logger = logging.getLogger(__name__)
@@ -93,7 +91,6 @@ class MaskFormerParsingDatasetMapper:
             "flip_map": meta.flip_map,
             "num_parsing": meta.num_parsing,
             "with_human_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_HUMAN_INSTANCE,
-            "with_bkg_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_BKG_INSTANCE,
         }
         return ret
 
@@ -135,9 +132,9 @@ class MaskFormerParsingDatasetMapper:
                 category_gt[left] = new_label
                 category_gt[right] = ori_label
 
-        # generate instance labels and masks for bkg, parts and humans
+        # generate instance labels and masks
         classes, masks = gen_parsing_instances(
-            human_gt, category_gt, self.with_bkg_instance, self.with_human_instance, self.num_parsing
+            human_gt, category_gt, self.with_human_instance, self.num_parsing
         )
 
         # Pad image and segmentation label here!

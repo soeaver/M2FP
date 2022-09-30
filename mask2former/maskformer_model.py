@@ -20,7 +20,6 @@ from .modeling.matcher import HungarianMatcher
 
 import copy, cv2
 import numpy as np
-from .utils.utils import compute_parsing_IoP
 from .modeling.postprocessing import single_human_sem_seg_postprocess
 
 
@@ -54,8 +53,8 @@ class MaskFormer(nn.Module):
             # parsing inference
             parsing_on: bool,
             with_human_instance: bool,
-            with_bkg_instance: bool,
-            parsing_ins_score_thr: float,
+            parsing_ins_score_thr: float
+
     ):
         """
         Args:
@@ -107,7 +106,6 @@ class MaskFormer(nn.Module):
         # parsing inference
         self.parsing_on = parsing_on
         self.with_human_instance = with_human_instance
-        self.with_bkg_instance = with_bkg_instance
         self.parsing_ins_score_thr = parsing_ins_score_thr
 
         if not self.semantic_on:
@@ -183,8 +181,7 @@ class MaskFormer(nn.Module):
             # parsing
             "parsing_on": cfg.MODEL.MASK_FORMER.TEST.PARSING_ON,
             "with_human_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_HUMAN_INSTANCE,
-            "with_bkg_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_BKG_INSTANCE,
-            "parsing_ins_score_thr": cfg.MODEL.MASK_FORMER.TEST.PARSING.PARSING_INS_SCORE_THR,
+            "parsing_ins_score_thr": cfg.MODEL.MASK_FORMER.TEST.PARSING.PARSING_INS_SCORE_THR
         }
 
     @property
@@ -286,16 +283,6 @@ class MaskFormer(nn.Module):
                             )
                         processed_results[-1]["sem_seg"] = r
 
-                # panoptic segmentation inference
-                if self.panoptic_on:
-                    panoptic_r = retry_if_cuda_oom(self.panoptic_inference)(mask_cls_result, mask_pred_result)
-                    processed_results[-1]["panoptic_seg"] = panoptic_r
-
-                # instance segmentation inference
-                if self.instance_on:
-                    instance_r = retry_if_cuda_oom(self.instance_inference)(mask_cls_result, mask_pred_result)
-                    processed_results[-1]["instances"] = instance_r
-
                 # parsing inference
                 if self.parsing_on:
                     parsing_r = retry_if_cuda_oom(self.instance_parsing_inference)(mask_cls_result, mask_pred_result)
@@ -355,10 +342,7 @@ class MaskFormer(nn.Module):
         human_scores = pred_scores[human_index]
         human_masks = pred_masks[human_index, :, :]
 
-        # semantic result
-        semantic_res = self.paste_instance_to_semantic_probs(
-            bkg_part_labels, bkg_part_scores, bkg_part_masks
-        )
+        semantic_res = self.paste_instance_to_semseg_probs(bkg_part_labels, bkg_part_scores, bkg_part_masks)
 
         # part instances
         part_index = torch.where(bkg_part_labels != 0)[0]
@@ -390,31 +374,24 @@ class MaskFormer(nn.Module):
                 )
 
         return {
-            "semantic_outputs": semantic_res.cpu(),
+            "semantic_outputs": semantic_res,
             "part_outputs": part_instance_res,
             "human_outputs": human_instance_res,
         }
 
-    def paste_instance_to_semantic_probs(self, labels, scores, mask_probs):
+    def semantic_inference(self, mask_cls, mask_pred):
+        mask_cls = F.softmax(mask_cls, dim=-1)[..., :-1]  # discard non-sense category
+        mask_pred = mask_pred.sigmoid()
+        semseg = torch.einsum("qc,qhw->chw", mask_cls, mask_pred)
+        return semseg
+
+    def paste_instance_to_semseg_probs(self, labels, scores, mask_probs):
         im_h, im_w = mask_probs.shape[-2:]
-
-        # get bkg prob map
-        if self.with_bkg_instance:
-            # get bkg instances
-            bkg_inds = torch.where(labels == 0)[0]
-            bkg_scores = scores[bkg_inds]
-            bkg_mask_probs = mask_probs[bkg_inds, :, :].sigmoid()
-
-            semseg_im = [self.paste_category_probs(bkg_scores, bkg_mask_probs, im_h, im_w)]
-        else:
-            semseg_im = [torch.zeros((im_h, im_w), dtype=torch.float32, device=mask_probs.device) + 1e-6]
-
-        # get part prob maps
-        for cls_ind in range(1, self.metadata.num_parsing):
+        semseg_im = []
+        for cls_ind in range(self.metadata.num_parsing):
             cate_inds = torch.where(labels == cls_ind)[0]
             cate_scores = scores[cate_inds]
             cate_mask_probs = mask_probs[cate_inds, :, :].sigmoid()
-
             semseg_im.append(self.paste_category_probs(cate_scores, cate_mask_probs, im_h, im_w))
 
         return torch.stack(semseg_im, dim=0).cpu()
@@ -435,139 +412,3 @@ class MaskFormer(nn.Module):
         category_probs /= paste_times
 
         return category_probs
-
-    def get_human_parsing(self, human_score, human_mask, part_scores, part_labels, part_masks):
-        im_h, im_w = part_masks.shape[-2:]
-
-        parsing_scores = [human_score]
-        parsing_probs = [1 - human_mask.sigmoid()]
-
-        valid_cls = 1
-        for cls_ind in range(1, self.metadata.num_parsing):  # skip class 'human'
-            cate_ind = torch.where(part_labels == cls_ind)[0]
-            if len(cate_ind) == 0:
-                score_cate = torch.tensor(0., device=part_scores.device)
-                parsing_cate = torch.zeros((im_h, im_w), dtype=torch.float32, device=part_masks.device)
-            elif len(cate_ind) == 1:
-                valid_cls += 1
-                score_cate = part_scores[cate_ind[0]]
-                parsing_cate = part_masks[cate_ind[0]].sigmoid()
-            else:
-                valid_cls += 1
-                masks_cate = part_masks[cate_ind].sigmoid()
-                score_cate = torch.mean(part_scores[cate_ind])
-                parsing_cate = torch.mean(masks_cate, dim=0)
-
-            parsing_scores.append(score_cate)
-            parsing_probs.append(parsing_cate)
-
-        parsing_score = torch.sum(torch.stack(parsing_scores)) / valid_cls
-
-        parsing_probs = torch.stack(parsing_probs, dim=0)  # (C, H, W)
-        parsing = parsing_probs.argmax(dim=0).to(dtype=torch.uint8)
-
-        return parsing_score, parsing
-
-    def semantic_inference(self, mask_cls, mask_pred):
-        mask_cls = F.softmax(mask_cls, dim=-1)[..., :-1]  # discard non-sense category
-        mask_pred = mask_pred.sigmoid()
-        semseg = torch.einsum("qc,qhw->chw", mask_cls, mask_pred)
-        return semseg
-
-    def panoptic_inference(self, mask_cls, mask_pred):
-        scores, labels = F.softmax(mask_cls, dim=-1).max(-1)
-        mask_pred = mask_pred.sigmoid()
-
-        keep = labels.ne(self.sem_seg_head.num_classes) & (scores > self.object_mask_threshold)
-        cur_scores = scores[keep]
-        cur_classes = labels[keep]
-        cur_masks = mask_pred[keep]
-        cur_mask_cls = mask_cls[keep]
-        cur_mask_cls = cur_mask_cls[:, :-1]
-
-        cur_prob_masks = cur_scores.view(-1, 1, 1) * cur_masks
-
-        h, w = cur_masks.shape[-2:]
-        panoptic_seg = torch.zeros((h, w), dtype=torch.int32, device=cur_masks.device)
-        segments_info = []
-
-        current_segment_id = 0
-
-        if cur_masks.shape[0] == 0:
-            # We didn't detect any mask :(
-            return panoptic_seg, segments_info
-        else:
-            # take argmax
-            cur_mask_ids = cur_prob_masks.argmax(0)
-            stuff_memory_list = {}
-            for k in range(cur_classes.shape[0]):
-                pred_class = cur_classes[k].item()
-                isthing = pred_class in self.metadata.thing_dataset_id_to_contiguous_id.values()
-                mask_area = (cur_mask_ids == k).sum().item()
-                original_area = (cur_masks[k] >= 0.5).sum().item()
-                mask = (cur_mask_ids == k) & (cur_masks[k] >= 0.5)
-
-                if mask_area > 0 and original_area > 0 and mask.sum().item() > 0:
-                    if mask_area / original_area < self.overlap_threshold:
-                        continue
-
-                    # merge stuff regions
-                    if not isthing:
-                        if int(pred_class) in stuff_memory_list.keys():
-                            panoptic_seg[mask] = stuff_memory_list[int(pred_class)]
-                            continue
-                        else:
-                            stuff_memory_list[int(pred_class)] = current_segment_id + 1
-
-                    current_segment_id += 1
-                    panoptic_seg[mask] = current_segment_id
-
-                    segments_info.append(
-                        {
-                            "id": current_segment_id,
-                            "isthing": bool(isthing),
-                            "category_id": int(pred_class),
-                        }
-                    )
-
-            return panoptic_seg, segments_info
-
-    def instance_inference(self, mask_cls, mask_pred):
-        # mask_pred is already processed to have the same shape as original input
-        image_size = mask_pred.shape[-2:]
-
-        # [Q, K]
-        scores = F.softmax(mask_cls, dim=-1)[:, :-1]
-        labels = torch.arange(self.sem_seg_head.num_classes, device=self.device).unsqueeze(0).repeat(self.num_queries,
-                                                                                                     1).flatten(0, 1)
-        # scores_per_image, topk_indices = scores.flatten(0, 1).topk(self.num_queries, sorted=False)
-        scores_per_image, topk_indices = scores.flatten(0, 1).topk(self.test_topk_per_image, sorted=False)
-        labels_per_image = labels[topk_indices]
-
-        topk_indices = topk_indices // self.sem_seg_head.num_classes
-        # mask_pred = mask_pred.unsqueeze(1).repeat(1, self.sem_seg_head.num_classes, 1).flatten(0, 1)
-        mask_pred = mask_pred[topk_indices]
-
-        # if this is panoptic segmentation, we only keep the "thing" classes
-        if self.panoptic_on:
-            keep = torch.zeros_like(scores_per_image).bool()
-            for i, lab in enumerate(labels_per_image):
-                keep[i] = lab in self.metadata.thing_dataset_id_to_contiguous_id.values()
-
-            scores_per_image = scores_per_image[keep]
-            labels_per_image = labels_per_image[keep]
-            mask_pred = mask_pred[keep]
-
-        result = Instances(image_size)
-        # mask (before sigmoid)
-        result.pred_masks = (mask_pred > 0).float()
-        result.pred_boxes = Boxes(torch.zeros(mask_pred.size(0), 4))
-        # Uncomment the following to get boxes from masks (this is slow)
-        # result.pred_boxes = BitMasks(mask_pred > 0).get_bounding_boxes()
-
-        # calculate average mask prob
-        mask_scores_per_image = (mask_pred.sigmoid().flatten(1) * result.pred_masks.flatten(1)).sum(1) / (
-                result.pred_masks.flatten(1).sum(1) + 1e-6)
-        result.scores = scores_per_image * mask_scores_per_image
-        result.pred_classes = labels_per_image
-        return result

@@ -6,6 +6,7 @@ import itertools
 import json
 import logging
 import sys
+import time
 from collections import OrderedDict
 
 import cv2
@@ -29,6 +30,7 @@ class ParsingEvaluator(DatasetEvaluator):
     def __init__(
             self,
             dataset_name,
+            ins_score_thr,
             distributed=True,
             output_dir=None,
             *,
@@ -52,6 +54,7 @@ class ParsingEvaluator(DatasetEvaluator):
         self._cpu_device = torch.device("cpu")
 
         self._metadata = MetadataCatalog.get(dataset_name)
+        self.ins_score_thr = ins_score_thr
 
         if output_dir is None:
             raise ValueError("output_dir must be provided to ParsingEvaluator.")
@@ -62,14 +65,12 @@ class ParsingEvaluator(DatasetEvaluator):
         self._parsing_predictions = []
 
     def process(self, inputs, outputs):
-
         output_dict = outputs[-1]["parsing"]
-
         image_name = inputs[0]["file_name"].split("/")[-1].split(".")[0]
         output_root = self._output_dir
         image_shape = (inputs[0]["height"], inputs[0]["width"])
 
-        # prepare semantic, part and human prediction
+        #################### prepare prediction outputs ####################
         semseg_path = os.path.join(output_root, "semantic")
         os.makedirs(semseg_path, exist_ok=True)
         part_path = os.path.join(output_root, "part")
@@ -102,24 +103,48 @@ class ParsingEvaluator(DatasetEvaluator):
         bg_id_index = np.where(human_ids == 0)[0]
         human_ids = np.delete(human_ids, bg_id_index)
 
-        # calculate prediction
+        # prepare part ins scores map
+        part_ins_preds = prepare_part_instances(copy.deepcopy(output_dict['part_outputs']))
+        ins_scores_map = [torch.zeros(image_shape, dtype=torch.float32)]
+        for cls_ind in range(1, self._metadata.num_parsing):
+            ins_scores_cate = torch.zeros(image_shape, dtype=torch.float32)
+            try:
+                scores_cate = part_ins_preds[cls_ind]["scores"]
+                mask_probs_cate = part_ins_preds[cls_ind]["masks"]
+            except:
+                scores_cate, mask_probs_cate = [], []
+            if len(scores_cate) > 0:
+                scores_cate = torch.tensor(scores_cate, dtype=torch.float32)
+                mask_probs_cate = torch.stack(mask_probs_cate, dim=0).sigmoid()
+                index = scores_cate.argsort()
+                for k in range(len(index)):
+                    if scores_cate[index[k]] < self.ins_score_thr:
+                        continue
+                    ins_mask_probs = mask_probs_cate[index[k], :, :] * scores_cate[index[k]]
+                    ins_scores_cate = torch.where(
+                        ins_mask_probs > 0.5, torch.max(scores_cate[index[k]], ins_scores_cate), ins_scores_cate
+                    )
+            ins_scores_map.append(ins_scores_cate)
+        global_ins_scores_map = torch.stack(ins_scores_map, dim=0).numpy()
+
+
+        #################### calculate prediction outputs ####################
         # semantic prediction
         semseg_png = copy.deepcopy(semantic_probs).argmax(dim=0).cpu().numpy()
 
         # part predictions
-        sorted_part_id = np.array([_s['score'] for _s in output_dict['part_outputs']]).argsort()
+        sorted_part_id = np.array([_s["score"] for _s in output_dict["part_outputs"]]).argsort()
         for _num_part, part_id in enumerate(sorted_part_id):
-            part_output = output_dict['part_outputs'][part_id]
-            # reserve id 0 for background
+            part_pred = output_dict["part_outputs"][part_id]
             if _num_part >= 255:
-                part_png = np.where(part_output['mask'] > 0, 0, part_png)
+                part_png = np.where(part_pred["mask"] > 0, 0, part_png)
             else:
-                part_png = np.where(part_output['mask'] > 0, _num_part + 1, part_png)
+                part_png = np.where(part_pred["mask"] > 0, _num_part + 1, part_png)
             part_info_tmp = {
-                'img_name': image_name,
-                'category_id': part_output["category_id"],
-                'score': part_output["score"],
-                'part_id': int(_num_part + 1),
+                "img_name": image_name,
+                "category_id": part_pred["category_id"],
+                "score": part_pred["score"],
+                "part_id": int(_num_part + 1),
             }
             part_info.append(part_info_tmp)
         part_info = filter_out_covered_ins_info(part_info, part_png)
@@ -141,23 +166,26 @@ class ParsingEvaluator(DatasetEvaluator):
 
             # parsing prediction
             human_part_label = (np.where(human_ids_map == human_id, 1, 0) * global_category_labels).astype(np.uint8)
-
-            human_part_probs = (np.where(human_ids_map == human_id, 1, 0) * (semantic_probs.cpu().numpy()))
-            human_parsing_probs = np.max(human_part_probs, 0)
-            human_hcm = np.where(human_parsing_probs > 0.8, 1, 0)
-            parsing_score = np.sum(human_parsing_probs * human_hcm) / np.sum(human_hcm)
-
-            parsing_score *= human_score
-
+            human_ins_scores_map = (np.where(human_ids_map == human_id, 1, 0) * global_ins_scores_map)
+            human_part_classes = np.unique(human_part_label)
+            human_ins_scores_map_selected = human_ins_scores_map[human_part_classes, :, :]  # select channels by labels
+            human_part_ins_scores = np.max(
+                human_ins_scores_map_selected.reshape(human_ins_scores_map_selected.shape[0], -1), 1
+            )
+            valid_parts_num = np.nonzero(human_part_ins_scores)[0].shape[0]
+            parsing_score = (np.sum(human_part_ins_scores) * human_score) / valid_parts_num
             self._parsing_predictions.append(
                 {
                     "img_name": image_name,
                     "parsing": csr_matrix(human_part_label),
-                    "score": parsing_score
+                    "score": parsing_score,
+                    "human_score": human_score,
+                    "mean_part_ins_score": parsing_score / human_score
                 }
             )
 
-        # save semantic, part and human prediction
+
+        #################### save prediction outputs ####################
         cv2.imwrite(os.path.join(semseg_path, image_name + ".png"), semseg_png)
 
         cv2.imwrite(os.path.join(part_path, "{}.png".format(image_name)), part_png)
@@ -248,6 +276,19 @@ def _evaluate_predictions_for_parsing(
     parsing_eval.summarize()
 
     return eval_res
+
+
+def prepare_part_instances(part_ins_preds):
+    part_preds_classes = {}
+    for part_ins_pred in part_ins_preds:
+        if part_ins_pred["category_id"] not in part_preds_classes:
+            part_preds_classes[part_ins_pred["category_id"]] = {
+                "scores": [part_ins_pred["score"]], "masks": [part_ins_pred["mask"]]
+            }
+        else:
+            part_preds_classes[part_ins_pred["category_id"]]["scores"].append(part_ins_pred["score"])
+            part_preds_classes[part_ins_pred["category_id"]]["masks"].append(part_ins_pred["mask"])
+    return part_preds_classes
 
 
 def filter_out_covered_ins_info(info_list, map):

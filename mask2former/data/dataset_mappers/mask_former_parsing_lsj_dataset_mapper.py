@@ -107,7 +107,6 @@ class MaskFormerParsingLSJDatasetMapper:
         num_parsing,
         flip_map,
         with_human_instance,
-        with_bkg_instance
     ):
         """
         NOTE: this interface is experimental.
@@ -123,7 +122,6 @@ class MaskFormerParsingLSJDatasetMapper:
         self.num_parsing = num_parsing
         self.flip_map = flip_map
         self.with_human_instance = with_human_instance
-        self.with_bkg_instance = with_bkg_instance
 
         assert self.is_train, "MaskFormerParsingLSJDatasetMapper should only be used for training!"
         logger = logging.getLogger(__name__)
@@ -143,7 +141,6 @@ class MaskFormerParsingLSJDatasetMapper:
             "flip_map": meta.flip_map,
             "num_parsing": meta.num_parsing,
             "with_human_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_HUMAN_INSTANCE,
-            "with_bkg_instance": cfg.MODEL.MASK_FORMER.TEST.PARSING.WITH_BKG_INSTANCE,
         }
         return ret
 
@@ -164,9 +161,9 @@ class MaskFormerParsingLSJDatasetMapper:
         human_gt = read_semseg_gt(dataset_dict.pop("human_file_name")).astype("double")
         category_gt = read_semseg_gt(dataset_dict.pop("category_file_name")).astype("double")
 
-        # generate instance labels and masks for bkg, parts and humans
+        # generate instance labels and masks
         class_ids, masks = gen_parsing_instances(
-            human_gt, category_gt, self.with_bkg_instance, self.with_human_instance, self.num_parsing
+            human_gt, category_gt, self.with_human_instance, self.num_parsing
         )
 
         # apply transforms to image

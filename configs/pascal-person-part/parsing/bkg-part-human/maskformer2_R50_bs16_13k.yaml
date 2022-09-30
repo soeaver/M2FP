@@ -44,9 +44,7 @@ MODEL:
       OVERLAP_THRESHOLD: 0.8
       OBJECT_MASK_THRESHOLD: 0.8
       PARSING:
-        WITH_HUMAN_INSTANCE: True
-        WITH_BKG_INSTANCE: True
-        METRICS: ("mIoU", "APr", "APh", "APp")
+        METRICS: ("mIoU", "APp")  # ("mIoU", "APr", "APh", "APp")
         PARSING_INS_SCORE_THR: 0.3
 SOLVER:
   IMS_PER_BATCH: 8 # 16
