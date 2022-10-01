@@ -80,9 +80,13 @@ class Trainer(DefaultTrainer):
 
         # parsing
         if evaluator_type == "parsing":
-            parsing_metrics = cfg.MODEL.MASK_FORMER.TEST.PARSING.METRICS
             evaluator_list.append(
-                ParsingEvaluator(dataset_name, output_dir=output_folder, parsing_metrics=parsing_metrics)
+                ParsingEvaluator(
+                    dataset_name,
+                    cfg.MODEL.MASK_FORMER.TEST.PARSING.PARSING_INS_SCORE_THR,
+                    output_dir=output_folder,
+                    parsing_metrics=cfg.MODEL.MASK_FORMER.TEST.PARSING.METRICS
+                )
             )
         # semantic segmentation
         if evaluator_type == "sem_seg":
