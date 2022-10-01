@@ -45,15 +45,15 @@ from detectron2.solver.build import maybe_add_gradient_clipping
 from detectron2.utils.logger import setup_logger
 
 # MaskFormer
-from mask2former import (
+from m2fp import (
     SemanticSegmentorWithTTA,
-    MaskFormerSemanticHPDatasetMapper,
-    MaskFormerParsingDatasetMapper,
-    MaskFormerParsingLSJDatasetMapper,
     ParsingWithTTA,
+    M2FPSemanticHPDatasetMapper,
+    M2FPParsingDatasetMapper,
+    M2FPParsingLSJDatasetMapper,
     ParsingEvaluator,
     WandBWriter,
-    add_maskformer2_config,
+    add_m2fp_config,
     build_detection_test_loader,
     load_image_into_numpy_array,
 )
@@ -80,9 +80,13 @@ class Trainer(DefaultTrainer):
 
         # parsing
         if evaluator_type == "parsing":
-            parsing_metrics = cfg.MODEL.MASK_FORMER.TEST.PARSING.METRICS
             evaluator_list.append(
-                ParsingEvaluator(dataset_name, output_dir=output_folder, parsing_metrics=parsing_metrics)
+                ParsingEvaluator(
+                    dataset_name,
+                    cfg.MODEL.M2FP.TEST.PARSING.PARSING_INS_SCORE_THR,
+                    output_dir=output_folder,
+                    parsing_metrics=cfg.MODEL.M2FP.TEST.PARSING.METRICS
+                )
             )
         # semantic segmentation
         if evaluator_type == "sem_seg":
@@ -101,16 +105,16 @@ class Trainer(DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg):
         # human semantic segmentation dataset mapper
-        if cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_semantic_hp":
-            mapper = MaskFormerSemanticHPDatasetMapper(cfg, True)
+        if cfg.INPUT.DATASET_MAPPER_NAME == "m2fp_semantic_hp":
+            mapper = M2FPSemanticHPDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         # human parsing dataset mapper
-        elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_parsing":
-            mapper = MaskFormerParsingDatasetMapper(cfg, True)
+        elif cfg.INPUT.DATASET_MAPPER_NAME == "m2fp_parsing":
+            mapper = M2FPParsingDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         # human parsing dataset mapper lsj new baseline
-        elif cfg.INPUT.DATASET_MAPPER_NAME == "mask_former_parsing_lsj":
-            mapper = MaskFormerParsingLSJDatasetMapper(cfg, True)
+        elif cfg.INPUT.DATASET_MAPPER_NAME == "m2fp_parsing_lsj":
+            mapper = M2FPParsingLSJDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         else:
             mapper = None
@@ -219,7 +223,7 @@ class Trainer(DefaultTrainer):
         logger = logging.getLogger("detectron2.trainer")
         # In the end of training, run an evaluation with TTA.
         logger.info("Running inference with test-time augmentation ...")
-        if cfg.MODEL.MASK_FORMER.TEST.PARSING_ON:
+        if cfg.MODEL.M2FP.TEST.PARSING_ON:
             model = ParsingWithTTA(cfg, model)
         else:
             model = SemanticSegmentorWithTTA(cfg, model)
@@ -247,12 +251,12 @@ def setup(args):
     cfg = get_cfg()
     # for poly lr schedule
     add_deeplab_config(cfg)
-    add_maskformer2_config(cfg)
+    add_m2fp_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
     default_setup(cfg, args)
-    # Setup logger for "mask_former" module
+    # Setup logger for "m2fp" module
     setup_logger(output=cfg.OUTPUT_DIR, distributed_rank=comm.get_rank(), name="mask2former")
     return cfg
 
