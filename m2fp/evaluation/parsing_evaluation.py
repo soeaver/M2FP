@@ -71,24 +71,24 @@ class ParsingEvaluator(DatasetEvaluator):
         image_shape = (inputs[0]["height"], inputs[0]["width"])
 
         #################### prepare prediction outputs ####################
+        # prepare category labels and probs
+        semantic_probs = output_dict["semantic_outputs"]
+        global_category_labels = copy.deepcopy(semantic_probs).argmax(dim=0)
+
         semseg_path = os.path.join(output_root, "semantic")
         os.makedirs(semseg_path, exist_ok=True)
         part_path = os.path.join(output_root, "part")
         os.makedirs(part_path, exist_ok=True)
-        part_png = np.zeros(image_shape, dtype=np.uint8)
+        part_png = torch.zeros(image_shape, dtype=torch.int64, device=semantic_probs.device)
         part_info = []
         human_path = os.path.join(output_root, "human")
         os.makedirs(human_path, exist_ok=True)
-        human_png = np.zeros(image_shape, dtype=np.uint8)
+        human_png = torch.zeros(image_shape, dtype=torch.int64, device=semantic_probs.device)
         human_info = []
-
-        # prepare category labels and probs
-        semantic_probs = output_dict["semantic_outputs"]
-        global_category_labels = copy.deepcopy(semantic_probs).argmax(dim=0).cpu().numpy()
 
         # prepare human ids
         human_ins_preds = output_dict["human_outputs"]
-        human_ids_map = np.zeros(image_shape, dtype=np.uint8)
+        human_ids_map = torch.zeros(image_shape, dtype=torch.int64, device=semantic_probs.device)
         human_scores = []
         sorted_human_idx = np.array([_s["score"] for _s in human_ins_preds]).argsort().tolist()
         human_ins_id = 1
@@ -96,25 +96,25 @@ class ParsingEvaluator(DatasetEvaluator):
             human_output = output_dict["human_outputs"][human_idx]
             if human_output["score"] < 0.:
                 continue
-            human_ids_map = np.where(human_output["mask"].numpy() > 0, human_ins_id, human_ids_map)
+            human_ids_map = torch.where(human_output["mask"] > 0, human_ins_id, human_ids_map)
             human_scores.append(human_output["score"])
             human_ins_id += 1
-        human_ids = np.unique(human_ids_map)
-        bg_id_index = np.where(human_ids == 0)[0]
-        human_ids = np.delete(human_ids, bg_id_index)
+        human_ids = torch.unique(human_ids_map)
+        human_id_index = torch.where(human_ids != 0)[0]
+        human_ids = human_ids[human_id_index]
 
         # prepare part ins scores map
         part_ins_preds = prepare_part_instances(copy.deepcopy(output_dict['part_outputs']))
-        ins_scores_map = [torch.zeros(image_shape, dtype=torch.float32)]
+        ins_scores_map = [torch.zeros(image_shape, dtype=torch.float32, device=semantic_probs.device)]
         for cls_ind in range(1, self._metadata.num_parsing):
-            ins_scores_cate = torch.zeros(image_shape, dtype=torch.float32)
+            ins_scores_cate = torch.zeros(image_shape, dtype=torch.float32, device=semantic_probs.device)
             try:
                 scores_cate = part_ins_preds[cls_ind]["scores"]
                 mask_probs_cate = part_ins_preds[cls_ind]["masks"]
             except:
                 scores_cate, mask_probs_cate = [], []
             if len(scores_cate) > 0:
-                scores_cate = torch.tensor(scores_cate, dtype=torch.float32)
+                scores_cate = torch.tensor(scores_cate, dtype=torch.float32, device=semantic_probs.device)
                 mask_probs_cate = torch.stack(mask_probs_cate, dim=0).sigmoid()
                 index = scores_cate.argsort()
                 for k in range(len(index)):
@@ -125,8 +125,7 @@ class ParsingEvaluator(DatasetEvaluator):
                         ins_mask_probs > 0.5, torch.max(scores_cate[index[k]], ins_scores_cate), ins_scores_cate
                     )
             ins_scores_map.append(ins_scores_cate)
-        global_ins_scores_map = torch.stack(ins_scores_map, dim=0).numpy()
-
+        global_ins_scores_map = torch.stack(ins_scores_map, dim=0)
 
         #################### calculate prediction outputs ####################
         # semantic prediction
@@ -137,9 +136,9 @@ class ParsingEvaluator(DatasetEvaluator):
         for _num_part, part_id in enumerate(sorted_part_id):
             part_pred = output_dict["part_outputs"][part_id]
             if _num_part >= 255:
-                part_png = np.where(part_pred["mask"] > 0, 0, part_png)
+                part_png = torch.where(part_pred["mask"] > 0, 0, part_png)
             else:
-                part_png = np.where(part_pred["mask"] > 0, _num_part + 1, part_png)
+                part_png = torch.where(part_pred["mask"] > 0, _num_part + 1, part_png)
             part_info_tmp = {
                 "img_name": image_name,
                 "category_id": part_pred["category_id"],
@@ -147,6 +146,7 @@ class ParsingEvaluator(DatasetEvaluator):
                 "part_id": int(_num_part + 1),
             }
             part_info.append(part_info_tmp)
+        part_png = part_png.cpu().numpy().astype(np.uint8)
         part_info = filter_out_covered_ins_info(part_info, part_png)
 
         # human & parsing prediction
@@ -154,7 +154,7 @@ class ParsingEvaluator(DatasetEvaluator):
         for human_id in human_ids:
             # human prediction
             human_score = human_scores[human_id - 1]
-            human_png = np.where(human_ids_map == human_id, total_human_num, human_png)
+            human_png = torch.where(human_ids_map == human_id, total_human_num, human_png)
             human_info.append(
                 {
                     "img_name": image_name,
@@ -165,25 +165,22 @@ class ParsingEvaluator(DatasetEvaluator):
             total_human_num += 1
 
             # parsing prediction
-            human_part_label = (np.where(human_ids_map == human_id, 1, 0) * global_category_labels).astype(np.uint8)
-            human_ins_scores_map = (np.where(human_ids_map == human_id, 1, 0) * global_ins_scores_map)
-            human_part_classes = np.unique(human_part_label)
+            human_part_label = (torch.where(human_ids_map == human_id, 1, 0) * global_category_labels)
+            human_ins_scores_map = (torch.where(human_ids_map == human_id, 1, 0) * global_ins_scores_map)
+            human_part_classes = torch.unique(human_part_label)
             human_ins_scores_map_selected = human_ins_scores_map[human_part_classes, :, :]  # select channels by labels
-            human_part_ins_scores = np.max(
-                human_ins_scores_map_selected.reshape(human_ins_scores_map_selected.shape[0], -1), 1
-            )
-            valid_parts_num = np.nonzero(human_part_ins_scores)[0].shape[0]
-            parsing_score = (np.sum(human_part_ins_scores) * human_score) / valid_parts_num
+            human_part_ins_scores = torch.max(human_ins_scores_map_selected.flatten(1, 2), dim=1)[0]
+            valid_parts_num = len(torch.where(human_part_ins_scores != 0)[0])
+            parsing_score = (torch.sum(human_part_ins_scores) * human_score) / valid_parts_num
+
             self._parsing_predictions.append(
                 {
                     "img_name": image_name,
-                    "parsing": csr_matrix(human_part_label),
-                    "score": parsing_score,
-                    "human_score": human_score,
-                    "mean_part_ins_score": parsing_score / human_score
+                    "parsing": csr_matrix(human_part_label.cpu().numpy()),
+                    "score": parsing_score.cpu(),
                 }
             )
-
+        human_png = human_png.cpu().numpy().astype(np.uint8)
 
         #################### save prediction outputs ####################
         cv2.imwrite(os.path.join(semseg_path, image_name + ".png"), semseg_png)

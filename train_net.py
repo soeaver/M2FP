@@ -83,9 +83,9 @@ class Trainer(DefaultTrainer):
             evaluator_list.append(
                 ParsingEvaluator(
                     dataset_name,
-                    cfg.MODEL.M2FP.TEST.PARSING.PARSING_INS_SCORE_THR,
+                    cfg.MODEL.M2FP.TEST.PARSING_INS_SCORE_THR,
                     output_dir=output_folder,
-                    parsing_metrics=cfg.MODEL.M2FP.TEST.PARSING.METRICS
+                    parsing_metrics=cfg.MODEL.M2FP.TEST.METRICS
                 )
             )
         # semantic segmentation

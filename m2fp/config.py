@@ -46,10 +46,12 @@ def add_m2fp_config(cfg):
 
     cfg.MODEL.M2FP.HIDDEN_DIM = 256
     cfg.MODEL.M2FP.NUM_OBJECT_QUERIES = 100
-    cfg.MODEL.M2FP.HIER_QUERIES = 0
 
     cfg.MODEL.M2FP.TRANSFORMER_IN_FEATURE = "res5"
     cfg.MODEL.M2FP.ENFORCE_INPUT_PROJ = False
+
+    cfg.MODEL.M2FP.HIER_QUERIES = 0
+    cfg.MODEL.M2FP.WITH_HUMAN_INSTANCE = True
 
     # M2FP inference config
     cfg.MODEL.M2FP.TEST = CN()
@@ -58,12 +60,8 @@ def add_m2fp_config(cfg):
     cfg.MODEL.M2FP.TEST.OBJECT_MASK_THRESHOLD = 0.0
     cfg.MODEL.M2FP.TEST.OVERLAP_THRESHOLD = 0.0
     cfg.MODEL.M2FP.TEST.SEM_SEG_POSTPROCESSING_BEFORE_INFERENCE = False
-    
-    ###### for parsing template ######
-    cfg.MODEL.M2FP.TEST.PARSING = CN()
-    cfg.MODEL.M2FP.TEST.PARSING.WITH_HUMAN_INSTANCE = True
-    cfg.MODEL.M2FP.TEST.PARSING.PARSING_INS_SCORE_THR = 0.5
-    cfg.MODEL.M2FP.TEST.PARSING.METRICS = ("mIoU", "APr", "APp")
+    cfg.MODEL.M2FP.TEST.PARSING_INS_SCORE_THR = 0.5
+    cfg.MODEL.M2FP.TEST.METRICS = ("mIoU", "APr", "APp")
 
     # Sometimes `backbone.size_divisibility` is set to 0 for some backbone (e.g. ResNet)
     # you can use this config to override
@@ -113,6 +111,7 @@ def add_m2fp_config(cfg):
     cfg.INPUT.SINGLE_HUMAN.ROTATION = True
     cfg.INPUT.SINGLE_HUMAN.ROT_FACTOR = 40
     cfg.INPUT.SINGLE_HUMAN.COLOR_AUG_SSD = False
+    cfg.INPUT.SINGLE_HUMAN.TEST_SCALES = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
 
     # MSDeformAttn encoder configs
     cfg.MODEL.SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES = ["res3", "res4", "res5"]

@@ -169,8 +169,8 @@ class M2FP(nn.Module):
             "parsing_on": cfg.MODEL.M2FP.TEST.PARSING_ON,
             "test_topk_per_image": cfg.TEST.DETECTIONS_PER_IMAGE,
             "single_human": True if "lip" in cfg.DATASETS.TEST[0] else False,
-            "with_human_instance": cfg.MODEL.M2FP.TEST.PARSING.WITH_HUMAN_INSTANCE,
-            "parsing_ins_score_thr": cfg.MODEL.M2FP.TEST.PARSING.PARSING_INS_SCORE_THR
+            "with_human_instance": cfg.MODEL.M2FP.WITH_HUMAN_INSTANCE,
+            "parsing_ins_score_thr": cfg.MODEL.M2FP.TEST.PARSING_INS_SCORE_THR
         }
 
     @property
@@ -347,7 +347,7 @@ class M2FP(nn.Module):
                 {
                     "category_id": part_labels[idx].cpu().tolist(),
                     "score": part_scores[idx].cpu().tolist(),
-                    "mask": part_masks[idx].cpu(),
+                    "mask": part_masks[idx],
                 }
             )
 
@@ -358,7 +358,7 @@ class M2FP(nn.Module):
                     {
                         "category_id": human_labels[human_idx].cpu().tolist(),
                         "score": human_scores[human_idx].cpu().tolist(),
-                        "mask": human_masks[human_idx].cpu(),
+                        "mask": human_masks[human_idx],
                     }
                 )
 
@@ -383,7 +383,7 @@ class M2FP(nn.Module):
             cate_mask_probs = mask_probs[cate_inds, :, :].sigmoid()
             semseg_im.append(self.paste_category_probs(cate_scores, cate_mask_probs, im_h, im_w))
 
-        return torch.stack(semseg_im, dim=0).cpu()
+        return torch.stack(semseg_im, dim=0)
 
     def paste_category_probs(self, scores, mask_probs, h, w):
         category_probs = torch.zeros((h, w), dtype=torch.float32, device=mask_probs.device)

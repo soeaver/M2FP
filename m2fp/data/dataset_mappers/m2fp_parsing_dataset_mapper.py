@@ -56,9 +56,6 @@ class M2FPParsingDatasetMapper:
 
     @classmethod
     def from_config(cls, cfg, is_train=True):
-        # parsing mapper do not applicable for single human
-        assert not cfg.INPUT.SINGLE_HUMAN.ENABLED
-
         # Build augmentation
         # for multi person human parsing, e.g. CIHP and MHP
         augs = [
@@ -79,7 +76,7 @@ class M2FPParsingDatasetMapper:
             "size_divisibility": cfg.INPUT.SIZE_DIVISIBILITY,
             "flip_map": meta.flip_map,
             "num_parsing": meta.num_parsing,
-            "with_human_instance": cfg.MODEL.M2FP.TEST.PARSING.WITH_HUMAN_INSTANCE,
+            "with_human_instance": cfg.MODEL.M2FP.WITH_HUMAN_INSTANCE,
         }
         return ret
 

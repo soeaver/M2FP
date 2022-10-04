@@ -41,9 +41,8 @@ MODEL:
       PARSING_ON: True
       OVERLAP_THRESHOLD: 0.8
       OBJECT_MASK_THRESHOLD: 0.8
-      PARSING:
-        METRICS: ("mIoU", "APp")  # ("mIoU", "APr", "APh", "APp")
-        PARSING_INS_SCORE_THR: 0.3
+      METRICS: ("mIoU", "APp")  # ("mIoU", "APr", "APh", "APp")
+      PARSING_INS_SCORE_THR: 0.3
 SOLVER:
   IMS_PER_BATCH: 8 # 16
   BASE_LR: 0.0002  # 0.0001

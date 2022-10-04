@@ -123,7 +123,7 @@ class M2FPParsingLSJDatasetMapper:
             "image_format": cfg.INPUT.FORMAT,
             "flip_map": meta.flip_map,
             "num_parsing": meta.num_parsing,
-            "with_human_instance": cfg.MODEL.M2FP.TEST.PARSING.WITH_HUMAN_INSTANCE,
+            "with_human_instance": cfg.MODEL.M2FP.WITH_HUMAN_INSTANCE,
         }
         return ret
 

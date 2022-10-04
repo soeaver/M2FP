@@ -16,6 +16,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.modeling import DatasetMapperTTA
 
 from detectron2.data.transforms import (
+    Resize,
     RandomFlip,
     apply_augmentations,
 )
@@ -25,13 +26,9 @@ from detectron2.data import MetadataCatalog
 
 from .utils.utils import predictions_merge
 
-__all__ = [
-    "ParsingSemanticSegmentorWithTTA",
-    "SingleHumanDatasetMapperTTA",
-    "SemanticSegmentorWithTTA",
-]
 
 HUMAN_PARSING_DATASETS = ["cihp", "mhp", "lip", "ATR"]
+
 
 class SingleHumanDatasetMapperTTA:
     """
@@ -43,18 +40,20 @@ class SingleHumanDatasetMapperTTA:
     """
 
     @configurable
-    def __init__(self, flip: bool):
+    def __init__(self, flip: bool, scales):
         """
         Args:
             flip: whether to apply flipping augmentation
         """
 
         self.flip = flip
+        self.scales = scales
 
     @classmethod
     def from_config(cls, cfg):
         return {
             "flip": cfg.TEST.AUG.FLIP,
+            "scales": cfg.INPUT.SINGLE_HUMAN.TEST_SCALES
         }
 
     def __call__(self, dataset_dict):
@@ -71,21 +70,39 @@ class SingleHumanDatasetMapperTTA:
         """
         numpy_image = dataset_dict["image"].permute(1, 2, 0).numpy()
 
-        # Create all combinations of augmentations to use
-        aug_candidates = [[]]  # each element is a list[Augmentation]
-        if self.flip:
-            flip = RandomFlip(prob=1.0)
-            aug_candidates.append([flip])  # resize + flip
+        h, w = numpy_image.shape[0], numpy_image.shape[1]
+        aug_candidates = []
+        for scale in self.scales:
+            new_h, new_w = int(h * scale), int(w * scale)
+
+            new_box = []
+            for coord in dataset_dict["crop_box"]:
+                new_box.append(int(coord * scale))
+
+            aug_candidates.append(
+                {
+                    "augs": [Resize((new_h, new_w))],
+                    "crop_box": new_box
+                }
+            )
+            if self.flip:
+                aug_candidates.append(
+                    {
+                        "augs": [Resize((new_h, new_w)), RandomFlip(prob=1.0)],
+                        "crop_box": new_box
+                    }
+                )
 
         # Apply all the augmentations
         ret = []
         for aug in aug_candidates:
-            new_image, tfms = apply_augmentations(aug, np.copy(numpy_image))
+            new_image, tfms = apply_augmentations(aug["augs"], np.copy(numpy_image))
             torch_image = torch.from_numpy(np.ascontiguousarray(new_image.transpose(2, 0, 1)))
 
             dic = copy.deepcopy(dataset_dict)
             dic["transforms"] = tfms
             dic["image"] = torch_image
+            dic["crop_box"] = aug["crop_box"]
             ret.append(dic)
         return ret
 
@@ -278,7 +295,6 @@ class ParsingWithTTA(nn.Module):
         all_semantic_predictions = []
         all_part_predictions = {}
         all_human_predictions = {}
-        # final_part_predictions = []
 
         for aug_input, tfm in zip(augmented_inputs, tfms):
             with torch.no_grad():
@@ -308,14 +324,16 @@ class ParsingWithTTA(nn.Module):
                     if part_prediction["category_id"] not in all_part_predictions:
                         all_part_predictions[part_prediction["category_id"]] = {"masks": [], "scores": []}
 
-                    all_part_predictions[part_prediction["category_id"]]["masks"].append(part_prediction["mask"].numpy())
+                    all_part_predictions[part_prediction["category_id"]]["masks"].append(
+                        part_prediction["mask"].cpu().numpy())
                     all_part_predictions[part_prediction["category_id"]]["scores"].append(part_prediction["score"])
 
                 for human_prediction in human_predictions:
                     if human_prediction["category_id"] not in all_human_predictions:
                         all_human_predictions[human_prediction["category_id"]] = {"masks": [], "scores": []}
 
-                    all_human_predictions[human_prediction["category_id"]]["masks"].append(human_prediction["mask"].numpy())
+                    all_human_predictions[human_prediction["category_id"]]["masks"].append(
+                        human_prediction["mask"].cpu().numpy())
                     all_human_predictions[human_prediction["category_id"]]["scores"].append(human_prediction["score"])
 
         # merge predictions from different augmentations
@@ -324,9 +342,8 @@ class ParsingWithTTA(nn.Module):
         final_semantic_predictions = torch.mean(all_semantic_predictions, dim=1)
 
         # part and human instance predictions
-        final_part_predictions = predictions_merge(all_part_predictions)
-        final_human_predictions = predictions_merge(all_human_predictions) \
-            if len(all_human_predictions) > 0 else []
+        final_part_predictions = predictions_merge(all_part_predictions, device=final_semantic_predictions.device)
+        final_human_predictions = predictions_merge(all_human_predictions, device=final_semantic_predictions.device)
 
         return {
             "parsing": {

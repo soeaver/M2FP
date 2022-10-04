@@ -41,7 +41,7 @@ def score_merge(scores_in):
     return np.max(scores_in)
 
 
-def predictions_merge(catdict_in, IOU_thr=0.5):
+def predictions_merge(catdict_in, IOU_thr=0.5, device=None):
     '''
 
     Args:
@@ -96,7 +96,7 @@ def predictions_merge(catdict_in, IOU_thr=0.5):
                 {
                     "category_id": k,
                     "score": _s,
-                    "mask": torch.from_numpy(_m),
+                    "mask": torch.as_tensor(_m, device=device),
                 }
             )
     return merged_output

@@ -420,7 +420,6 @@ class ParsingEval(object):
             APp = self._voc_ap(rec_seg, prec_seg)
             all_APp[thre] = APp
 
-            # np.max(tp_seg[j]), len(pcp_list[j]): 当前阈值下有多少tp
             assert (np.max(tp_seg[j]) == len(pcp_list[j])), "%d vs %d" % (np.max(tp_seg[j]), len(pcp_list[j]))
             pcp_list[j].extend([0.0] * (npos - len(pcp_list[j])))
             PCP = np.mean(pcp_list[j])
@@ -494,7 +493,7 @@ class ParsingEval(object):
             if n_pre_inst == 0:
                 continue
 
-            scores += tmp_scores  # person instance scores for curr image
+            scores += tmp_scores
 
             if n_gt_inst == 0:
                 for i in range(n_pre_inst):

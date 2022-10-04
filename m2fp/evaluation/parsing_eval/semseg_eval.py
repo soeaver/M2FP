@@ -38,7 +38,6 @@ class SemSegEvaluator(object):
         self._logger = logging.getLogger(__name__)
 
     def fast_hist(self, a, b):
-        # print('gt & pre shape: ', a.shape, b.shape)
         k = (a >= 0) & (a < self.num_classes)
         return np.bincount(
             self.num_classes * a[k].astype(int) + b[k], minlength=self.num_classes ** 2
