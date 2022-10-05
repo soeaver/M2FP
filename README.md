@@ -8,11 +8,12 @@
 
 ### Features
 * A single architecture for single human parsing, and multiple (instance-level) human parsing.
-* Support several parsing datasets: LIP, PASCAL-Person-Part, CIHP, MHPv2.
+* Support several parsing datasets: LIP, PASCAL-Person-Part, CIHP, MHP-v2.
 * 
 
 ## Updates
 [2022/10/5] v1.0.
+
 [2022/6/19] Code initialization.
 
 
@@ -38,7 +39,7 @@ See [Getting Started with M2FP](GETTING_STARTED.md).
 | MHP-v2            | 47.64 /        |             | 53.36 /     |          |
 
 
-<p align="center"><img width="50%" src="datasets/m2fp_performance.png" /></p>
+<p align="center"><img width="90%" src="datasets/m2fp_performance.png" /></p>
 
 
 ## License

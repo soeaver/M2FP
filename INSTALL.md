@@ -15,7 +15,7 @@ After preparing the required environment, run the following command to compile C
 `CUDA_HOME` must be defined and points to the directory of the installed CUDA toolkit.
 
 ```bash
-cd mask2former/modeling/pixel_decoder/ops
+cd m2fp/modeling/pixel_decoder/ops
 sh make.sh
 ```
 
@@ -27,8 +27,8 @@ TORCH_CUDA_ARCH_LIST='8.0' FORCE_CUDA=1 python setup.py build install
 
 ### Example conda environment setup
 ```bash
-conda create --name mask2former python=3.8 -y
-conda activate mask2former
+conda create --name m2fp python=3.8 -y
+conda activate m2fp
 conda install pytorch==1.9.0 torchvision==0.10.0 cudatoolkit=11.1 -c pytorch -c nvidia
 pip install -U opencv-python
 
@@ -36,13 +36,11 @@ pip install -U opencv-python
 git clone git@github.com:facebookresearch/detectron2.git
 cd detectron2
 pip install -e .
-pip install git+https://github.com/cocodataset/panopticapi.git
-pip install git+https://github.com/mcordts/cityscapesScripts.git
 
 cd ..
-git clone git@github.com:facebookresearch/Mask2Former.git
-cd Mask2Former
+git clone https://github.com/soeaver/M2FP.git
+cd M2FP
 pip install -r requirements.txt
-cd mask2former/modeling/pixel_decoder/ops
+cd m2fp/modeling/pixel_decoder/ops
 sh make.sh
 ```
