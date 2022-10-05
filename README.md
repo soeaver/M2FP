@@ -4,7 +4,7 @@
 > [![paper](https://img.shields.io/badge/Paper-arxiv-b31b1b)](https://)
 
 
-<p align="center"><img width="50%" src="datasets/m2fp_arch.png" /></p>
+<p align="center"><img width="90%" src="datasets/m2fp_arch.png" /></p>
 
 ### Features
 * A single architecture for single human parsing, and multiple (instance-level) human parsing.
@@ -39,7 +39,7 @@ See [Getting Started with M2FP](GETTING_STARTED.md).
 | MHP-v2            | 47.64 /        |             | 53.36 /     |          |
 
 
-<p align="center"><img width="90%" src="datasets/m2fp_performance.png" /></p>
+<p align="center"><img width="50%" src="datasets/m2fp_performance.png" /></p>
 
 
 ## License
