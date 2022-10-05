@@ -2,7 +2,7 @@ MODEL:
   BACKBONE:
     FREEZE_AT: 0
     NAME: "build_resnet_backbone"
-  WEIGHTS: "./weights/R-50.pkl"
+  WEIGHTS: "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
   RESNETS:
@@ -14,15 +14,15 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
 DATASETS:
-  TRAIN: ("lip_parsing_train",)
-  TEST: ("lip_parsing_val",)
+  TRAIN: ("pascal_person_part_parsing_train",)
+  TEST: ("pascal_person_part_parsing_test",)
 SOLVER:
   IMS_PER_BATCH: 16
-  BASE_LR: 0.0001
-  STEPS: (200000, 218000)
-  MAX_ITER: 230000  # 120 ep for lip train with 30462 images
-  WARMUP_FACTOR: 1.0
-  WARMUP_ITERS: 10
+  BASE_LR: 0.0004
+  STEPS: (14400, 15200)
+  MAX_ITER: 16000  # 150 ep for ppp train with 1716 images
+  WARMUP_FACTOR: 0.000001
+  WARMUP_ITERS: 500
   WEIGHT_DECAY: 0.05
   OPTIMIZER: "ADAMW"
   BACKBONE_MULTIPLIER: 0.1
@@ -34,12 +34,11 @@ SOLVER:
   AMP:
     ENABLED: True
 INPUT:
-  MIN_SIZE_TRAIN: (416, 448, 480, 512, 544, 576, 608, 640, 672)
+  MIN_SIZE_TRAIN: (512, 640, 704, 768, 800, 864)
   MAX_SIZE_TRAIN: 1400
-  MIN_SIZE_TEST: 512
-  DATASET_MAPPER_NAME: "mask_former_parsing"
+  DATASET_MAPPER_NAME: "m2fp_parsing"
 TEST:
-  EVAL_PERIOD: 10000
+  EVAL_PERIOD: 1000
 DATALOADER:
   FILTER_EMPTY_ANNOTATIONS: True
   NUM_WORKERS: 4

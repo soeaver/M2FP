@@ -50,7 +50,6 @@ def add_m2fp_config(cfg):
     cfg.MODEL.M2FP.TRANSFORMER_IN_FEATURE = "res5"
     cfg.MODEL.M2FP.ENFORCE_INPUT_PROJ = False
 
-    cfg.MODEL.M2FP.HIER_QUERIES = 0
     cfg.MODEL.M2FP.WITH_HUMAN_INSTANCE = True
 
     # M2FP inference config
@@ -93,7 +92,6 @@ def add_m2fp_config(cfg):
     cfg.MODEL.SWIN.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
     cfg.MODEL.SWIN.USE_CHECKPOINT = False
 
-    # NOTE: M2FP extra configs
     # transformer module
     cfg.MODEL.M2FP.TRANSFORMER_DECODER_NAME = "MultiScaleMaskedTransformerDecoder"
 
@@ -103,13 +101,12 @@ def add_m2fp_config(cfg):
     cfg.INPUT.MAX_SCALE = 2.0
     cfg.INPUT.ROTATION = 0
 
-    # single human parsing aug
+    # Single human parsing aug
     cfg.INPUT.SINGLE_HUMAN = CN()
     cfg.INPUT.SINGLE_HUMAN.ENABLED = False
     cfg.INPUT.SINGLE_HUMAN.SIZES = ([384, 512],)
-    cfg.INPUT.SINGLE_HUMAN.SCALE_FACTOR = 0.3
-    cfg.INPUT.SINGLE_HUMAN.ROTATION = True
-    cfg.INPUT.SINGLE_HUMAN.ROT_FACTOR = 40
+    cfg.INPUT.SINGLE_HUMAN.SCALE_FACTOR = 0.8
+    cfg.INPUT.SINGLE_HUMAN.ROTATION = 40
     cfg.INPUT.SINGLE_HUMAN.COLOR_AUG_SSD = False
     cfg.INPUT.SINGLE_HUMAN.TEST_SCALES = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
 

@@ -104,15 +104,15 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_train_loader(cls, cfg):
-        # human semantic segmentation dataset mapper
+        # single human parsing dataset mapper
         if cfg.INPUT.DATASET_MAPPER_NAME == "m2fp_semantic_hp":
             mapper = M2FPSemanticHPDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
-        # human parsing dataset mapper
+        # multiple human parsing dataset mapper
         elif cfg.INPUT.DATASET_MAPPER_NAME == "m2fp_parsing":
             mapper = M2FPParsingDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
-        # human parsing dataset mapper lsj new baseline
+        # multiple human parsing dataset mapper with lsj
         elif cfg.INPUT.DATASET_MAPPER_NAME == "m2fp_parsing_lsj":
             mapper = M2FPParsingLSJDatasetMapper(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)

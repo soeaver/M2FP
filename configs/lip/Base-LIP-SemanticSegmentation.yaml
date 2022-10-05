@@ -2,6 +2,7 @@ MODEL:
   BACKBONE:
     FREEZE_AT: 0
     NAME: "build_resnet_backbone"
+  # resnet b
   WEIGHTS: "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
@@ -14,14 +15,14 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
 DATASETS:
-  TRAIN: ("mhpv2_semseg_train",)
-  TEST: ("mhpv2_semseg_val",)
+  TRAIN: ("lip_semseg_train",)
+  TEST: ("lip_semseg_val",)
 SOLVER:
-  IMS_PER_BATCH: 16
-  BASE_LR: 0.0001
-  MAX_ITER: 120000  # ~120 epcoch
-  WARMUP_FACTOR: 1.0
-  WARMUP_ITERS: 0
+  IMS_PER_BATCH: 64
+  BASE_LR: 0.0008
+  MAX_ITER: 72000 # ~ 150 epoch
+  WARMUP_FACTOR: 0.000001
+  WARMUP_ITERS: 1500
   WEIGHT_DECAY: 0.05
   OPTIMIZER: "ADAMW"
   LR_SCHEDULER_NAME: "WarmupPolyLR"
@@ -34,23 +35,18 @@ SOLVER:
   AMP:
     ENABLED: True
 INPUT:
-  MIN_SIZE_TRAIN: (800,)
-  MIN_SIZE_TRAIN_SAMPLING: "choice"
-  MIN_SIZE_TEST: 512
-  CROP:
-    ENABLED: True
-    TYPE: "absolute"
-    SIZE: (512, 512)
-    SINGLE_CATEGORY_MAX_AREA: 1.0
-  COLOR_AUG_SSD: True
-  SIZE_DIVISIBILITY: 512  # used in dataset mapper
   FORMAT: "RGB"
-  DATASET_MAPPER_NAME: "mask_former_semantic_hp"
+  DATASET_MAPPER_NAME: "m2fp_semantic_hp"
+  SINGLE_HUMAN:
+    ENABLED: True # use single human aug
+    SIZES: ([384, 512],)
+    SCALE_FACTOR: 0.8
+    ROTATION: 40
 TEST:
   EVAL_PERIOD: 10000
   AUG:
     ENABLED: False
-    MIN_SIZES: [256, 384, 512, 640, 768, 896]
+    MIN_SIZES: [384]
     MAX_SIZE: 3584
     FLIP: True
 DATALOADER:

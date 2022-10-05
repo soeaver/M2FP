@@ -1,23 +1,25 @@
 # M2FP: Mask2Former for Parsing
 
-By **Lu Yang**, **Hongjie Liu**, **Wenhe Jia**, **Qing Song**
+> [Deep Learning Technique for Human Parsing: A Survey and Outlook]() <br>
+> [![paper](https://img.shields.io/badge/Paper-arxiv-b31b1b)](https://)
 
-`arXiv`(need to be updated)
 
-<div align="center">
-  <img src="https://bowenc0221.github.io/images/maskformerv2_teaser.png" width="100%" height="100%"/>
-</div><br/>
+<p align="center"><img width="50%" src="datasets/m2fp_arch.png" /></p>
 
 ### Features
-* A single architecture for single human parsing, multiple (instance-level) human parsing, video human parsing and face parsing.
-* Support several parsing datasets: LIP, ATR, PASCAL-Person-Part, CIHP, MHPv2, VIP, LaPa, CelebAMask-HQ.
+* A single architecture for single human parsing, and multiple (instance-level) human parsing.
+* Support several parsing datasets: LIP, PASCAL-Person-Part, CIHP, MHPv2.
+* 
 
 ## Updates
+[2022/10/5] v1.0.
 [2022/6/19] Code initialization.
+
 
 ## Installation
 
 See [installation instructions](INSTALL.md).
+
 
 ## Getting Started
 
@@ -25,13 +27,19 @@ See [Preparing Datasets for M2FP](datasets/README.md).
 
 See [Getting Started with M2FP](GETTING_STARTED.md).
 
-## Advanced usage
 
-See [Advanced Usage of M2FP](ADVANCED_USAGE.md).
+## Results and Models
 
-## Model Zoo and Baselines
+|  Datasets         | mIoU / pixAcc. | APr / APr50 | APp / APp50 | DOWNLOAD |
+|:-----------------:|:--------------:|:-----------:|:-----------:| :-------:|
+| LIP               | 59.88 / 88.90  |             |             |          |
+| PASCAL-Person-Part| 72.54 /        | 56.46 /     |             |          |
+| CIHP              | 59.15 /        | 60.47 /     |             |          |
+| MHP-v2            | 47.64 /        |             | 53.36 /     |          |
 
-We provide a large set of baseline results and trained models available for download in the [M2FP Model Zoo](MODEL_ZOO.md).
+
+<p align="center"><img width="50%" src="datasets/m2fp_performance.png" /></p>
+
 
 ## License
 
@@ -47,8 +55,6 @@ The majority of M2FP is licensed under a
 [cc-by-nc-shield]: https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg
 
 
-However portions of the project are available under separate license terms: Swin-Transformer-Semantic-Segmentation is licensed under the [MIT license](https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation/blob/main/LICENSE), Deformable-DETR is licensed under the [Apache-2.0 License](https://github.com/fundamentalvision/Deformable-DETR/blob/main/LICENSE).
-
 ## <a name="CitingM2FP"></a>Citing M2FP
 
 If you use M2FP in your research or wish to refer to the baseline results published in the [Model Zoo](MODEL_ZOO.md), please use the following BibTeX entry.
@@ -56,7 +62,7 @@ If you use M2FP in your research or wish to refer to the baseline results publis
 ```BibTeX
 @article{yang2022parsing,
   title={Deep Learning Technique for Human Parsing: A Survey and Outlook},
-  author={Lu Yang and Hongjie Liu and Wenhe Jia and Qing Song},
+  author={Lu Yang},
   journal={arXiv},
   year={2022}
 }

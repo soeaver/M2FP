@@ -14,17 +14,17 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
 DATASETS:
-  TRAIN: ("cihp_semseg_train",)
-  TEST: ("cihp_semseg_val",)
+  TRAIN: ("mhpv2_parsing_train",)
+  TEST: ("mhpv2_parsing_val",)
 SOLVER:
   IMS_PER_BATCH: 16
-  BASE_LR: 0.0001
-  MAX_ITER: 210000  # ~120 epcoch
-  WARMUP_FACTOR: 1.0
-  WARMUP_ITERS: 0
+  BASE_LR: 0.0004
+  STEPS: (130000, 137500)
+  MAX_ITER: 145000  # 150 ep for mhpv2 train with 15403 images
+  WARMUP_FACTOR: 0.000001
+  WARMUP_ITERS: 1500
   WEIGHT_DECAY: 0.05
   OPTIMIZER: "ADAMW"
-  LR_SCHEDULER_NAME: "WarmupPolyLR"
   BACKBONE_MULTIPLIER: 0.1
   CLIP_GRADIENTS:
     ENABLED: True
@@ -34,27 +34,11 @@ SOLVER:
   AMP:
     ENABLED: True
 INPUT:
-  MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 512) for x in range(5, 21)]"]
-  MIN_SIZE_TRAIN_SAMPLING: "choice"
-  MIN_SIZE_TEST: 512
-  MAX_SIZE_TRAIN: 2048
-  MAX_SIZE_TEST: 2048
-  CROP:
-    ENABLED: True
-    TYPE: "absolute"
-    SIZE: (512, 512)
-    SINGLE_CATEGORY_MAX_AREA: 1.0
-  COLOR_AUG_SSD: True
-  SIZE_DIVISIBILITY: 512  # used in dataset mapper
-  FORMAT: "RGB"
-  DATASET_MAPPER_NAME: "mask_former_semantic_hp"
+  MIN_SIZE_TRAIN: (512, 640, 704, 768, 800, 864)
+  MAX_SIZE_TRAIN: 1400
+  DATASET_MAPPER_NAME: "m2fp_parsing"
 TEST:
   EVAL_PERIOD: 10000
-  AUG:
-    ENABLED: False
-    MIN_SIZES: [256, 384, 512, 640, 768, 896]
-    MAX_SIZE: 3584
-    FLIP: True
 DATALOADER:
   FILTER_EMPTY_ANNOTATIONS: True
   NUM_WORKERS: 4
