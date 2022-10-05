@@ -58,7 +58,7 @@ The majority of M2FP is licensed under a
 
 ## <a name="CitingM2FP"></a>Citing M2FP
 
-If you use M2FP in your research or wish to refer to the baseline results published in the [Model Zoo](MODEL_ZOO.md), please use the following BibTeX entry.
+If you use M2FP in your research or wish to refer to the baseline results, please use the following BibTeX entry.
 
 ```BibTeX
 @article{yang2022parsing,
@@ -69,7 +69,7 @@ If you use M2FP in your research or wish to refer to the baseline results publis
 }
 ```
 
-If you find the code useful, please also consider the following BibTeX entry.
+If you find the code useful, please also consider the following MaskFormer and Mask2Former BibTeX entry.
 
 ```BibTeX
 @inproceedings{cheng2021mask2former,
