@@ -8,6 +8,5 @@
 python train_net.py \
 	--dist-url tcp://127.0.0.1:$(( RANDOM % 1000 + 20100 )) \
 	--num-gpus 8 \
-	--config configs/pascal-person-part/m2fp_R101_bs16_16k.yaml \
-	OUTPUT_DIR training_dir/pascal-person-part \
-	WANDB.ENABLED True WANDB.ENTITY xxxx WANDB.NAME m2fp-ppp \
+	--config configs/cihp/m2fp_R101_bs16_265k.yaml \
+	OUTPUT_DIR training_dir/cihp \

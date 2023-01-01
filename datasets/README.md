@@ -1,6 +1,6 @@
 ## Prepare Datasets for Mask2Former
 
-You can get the prepared LIP, PASCAL-Person-Part, CIHP, MHP-v2 from [here](xxxxx), and put them in `M2FP/datasets/` folder.
+You should get the LIP, PASCAL-Person-Part, CIHP, MHP-v2 from original website, and put them in `M2FP/datasets/` folder.
 
 
 ### Expected dataset structure for LIP:

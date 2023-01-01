@@ -9,9 +9,11 @@
 ### Features
 * A single architecture for single human parsing, and multiple (instance-level) human parsing.
 * Support several parsing datasets: LIP, PASCAL-Person-Part, CIHP, MHP-v2.
-* 
+
 
 ## Updates
+[2023/1/2] release.
+
 [2022/10/5] v1.0.
 
 [2022/6/19] Code initialization.
@@ -31,12 +33,12 @@ See [Getting Started with M2FP](GETTING_STARTED.md).
 
 ## Results and Models
 
-|  Datasets         | mIoU / pixAcc. | APr / APr50 | APp / APp50 | DOWNLOAD |
-|:-----------------:|:--------------:|:-----------:|:-----------:| :-------:|
-| LIP               | 59.88 / 88.90  |             |             |          |
-| PASCAL-Person-Part| 72.54 /        | 56.46 /     |             |          |
-| CIHP              | 69.15 /        | 60.47 /     |             |          |
-| MHP-v2            | 47.64 /        |             | 53.36 /     |          |
+|  Datasets         | mIoU  |  APr  |  APp  | DOWNLOAD |
+|:-----------------:|:-----:|:-----:|:-----:| :-------:|
+| LIP               | 59.86 |       |       | [passwd: 36ec](https://pan.baidu.com/s/1ah-0RJ_BdPjLqklWmcoiFA)         |
+| PASCAL-Person-Part| 72.54 | 56.46 |       |          |
+| CIHP              | 69.15 | 60.47 |       | [passwd: jzrn](https://pan.baidu.com/s/1oquw4pujHdkCEPtUHFyG7g)          |
+| MHP-v2            | 47.64 |       | 53.36 | [passwd: seel](https://pan.baidu.com/s/17S-932D-bs1VlU3MANge9A)         |
 
 
 <p align="center"><img width="50%" src="datasets/m2fp_performance.png" /></p>
