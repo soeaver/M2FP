@@ -1,10 +1,22 @@
 # M2FP: Mask2Former for Parsing
 
 > [Deep Learning Technique for Human Parsing: A Survey and Outlook]() <br>
-> [![paper](https://img.shields.io/badge/Paper-arxiv-b31b1b)](https://)
-
+> [![paper](https://img.shields.io/badge/Paper-arxiv-b31b1b)](https://arxiv.org/pdf/2301.00394.pdf)
 
 <p align="center"><img width="90%" src="datasets/m2fp_arch.png" /></p>
+
+
+If you find this repository helpful, please consider citing:
+
+```BibTeX
+@article{yang2023humanparsing,
+  title={Deep Learning Technique for Human Parsing: A Survey and Outlook},
+  author={Lu Yang and Wenhe Jia and Shan Li and Qing Song},
+  journal={arXiv preprint arXiv:2301.00394},
+  year={2023}
+}
+```
+
 
 ### Features
 * A single architecture for single human parsing, and multiple (instance-level) human parsing.
@@ -12,11 +24,9 @@
 
 
 ## Updates
-[2023/1/2] release.
+[2023/1/3] paper and code released.
 
-[2022/10/5] v1.0.
-
-[2022/6/19] Code initialization.
+[2022/6/19] code initialization.
 
 
 ## Installation
