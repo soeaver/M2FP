@@ -14,8 +14,8 @@ MODEL:
     # NORM: "SyncBN"
     RES5_MULTI_GRID: [1, 1, 1]  # not used
 DATASETS:
-  TRAIN: ("pascal_person_part_parsing_train",)
-  TEST: ("pascal_person_part_parsing_test",)
+  TRAIN: ("pascal-person-part_parsing_train",)
+  TEST: ("pascal-person-part_parsing_test",)
 SOLVER:
   IMS_PER_BATCH: 16
   BASE_LR: 0.0004

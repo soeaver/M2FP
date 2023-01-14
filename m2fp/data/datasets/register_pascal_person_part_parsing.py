@@ -20,13 +20,13 @@ PASCAL_PERSON_PART_PARSING_CATEGORIES = [
 PASCAL_PERSON_PART_FLIP_MAP = ()
 
 _PREDEFINED_SPLITS = {
-    "pascal_person_part_parsing_train": (
+    "pascal-person-part_parsing_train": (
         "Training/Images/",
         "Training/Category_ids/",
         "Training/Instance_ids/",
         "Training/Human_ids/",
     ),
-    "pascal_person_part_parsing_test": (
+    "pascal-person-part_parsing_test": (
         "Testing/Images/",
         "Testing/Category_ids/",
         "Testing/Instance_ids/",
