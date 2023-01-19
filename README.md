@@ -45,10 +45,10 @@ See [Getting Started with M2FP](GETTING_STARTED.md).
 
 |  Datasets         | mIoU  |  APr  |  APp  | DOWNLOAD |
 |:-----------------:|:-----:|:-----:|:-----:| :-------:|
-| LIP               | 59.86 |       |       | [BaiduCloud (passwd: 36ec)](https://pan.baidu.com/s/1ah-0RJ_BdPjLqklWmcoiFA) [GoogleDrive](https://drive.google.com/drive/folders/1UCyo2c1zJqncItyydC64PE78KaX0iR2F?usp=share_link)        |
+| LIP               | 59.86 |       |       | [BaiduCloud (passwd: 36ec)](https://pan.baidu.com/s/1ah-0RJ_BdPjLqklWmcoiFA), [GoogleDrive](https://drive.google.com/drive/folders/1lSRMJy_g5Q7FsH4dlahST9bIgNusMuCR?usp=share_link)        |
 | PASCAL-Person-Part| 72.54 | 56.46 |       |          |
-| CIHP              | 69.15 | 60.47 |       | [passwd: jzrn](https://pan.baidu.com/s/1oquw4pujHdkCEPtUHFyG7g)          |
-| MHP-v2            | 47.64 |       | 53.36 | [passwd: seel](https://pan.baidu.com/s/17S-932D-bs1VlU3MANge9A)         |
+| CIHP              | 69.15 | 60.47 |       | [BaiduCloud (passwd: jzrn)](https://pan.baidu.com/s/1oquw4pujHdkCEPtUHFyG7g), [GoogleDrive](https://drive.google.com/drive/folders/1UCyo2c1zJqncItyydC64PE78KaX0iR2F?usp=share_link)          |
+| MHP-v2            | 47.64 |       | 53.36 | [BaiduCloud (passwd: seel)](https://pan.baidu.com/s/17S-932D-bs1VlU3MANge9A), [GoogleDrive](https://drive.google.com/drive/folders/1i-OFPzPRfRQ3prCtC60gmq5h-Ke1vo9o?usp=share_link)      |
 
 
 <p align="center"><img width="50%" src="datasets/m2fp_performance.png" /></p>
@@ -75,8 +75,8 @@ If you use M2FP in your research or wish to refer to the baseline results, pleas
 ```BibTeX
 @article{yang2022parsing,
   title={Deep Learning Technique for Human Parsing: A Survey and Outlook},
-  author={Lu Yang},
-  journal={arXiv},
+  author={Lu Yang and Wenhe Jia and Shan Li and Qing Song},
+  journal={arXiv preprint arXiv:2301.00394},
   year={2022}
 }
 ```
