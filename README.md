@@ -45,7 +45,7 @@ See [Getting Started with M2FP](GETTING_STARTED.md).
 
 |  Datasets         | mIoU  |  APr  |  APp  | DOWNLOAD |
 |:-----------------:|:-----:|:-----:|:-----:| :-------:|
-| LIP               | 59.86 |       |       | [passwd: 36ec](https://pan.baidu.com/s/1ah-0RJ_BdPjLqklWmcoiFA)         |
+| LIP               | 59.86 |       |       | [BaiduCloud (passwd: 36ec)](https://pan.baidu.com/s/1ah-0RJ_BdPjLqklWmcoiFA) [GoogleDrive](https://drive.google.com/drive/folders/1UCyo2c1zJqncItyydC64PE78KaX0iR2F?usp=share_link)        |
 | PASCAL-Person-Part| 72.54 | 56.46 |       |          |
 | CIHP              | 69.15 | 60.47 |       | [passwd: jzrn](https://pan.baidu.com/s/1oquw4pujHdkCEPtUHFyG7g)          |
 | MHP-v2            | 47.64 |       | 53.36 | [passwd: seel](https://pan.baidu.com/s/17S-932D-bs1VlU3MANge9A)         |
