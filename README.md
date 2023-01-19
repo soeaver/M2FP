@@ -24,6 +24,8 @@ If you find this repository helpful, please consider citing:
 
 
 ## Updates
+[2023/1/19] models in GoogleDrive are released.
+
 [2023/1/3] paper and code released.
 
 [2022/6/19] code initialization.
@@ -68,18 +70,7 @@ The majority of M2FP is licensed under a
 [cc-by-nc-shield]: https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg
 
 
-## <a name="CitingM2FP"></a>Citing M2FP
-
-If you use M2FP in your research or wish to refer to the baseline results, please use the following BibTeX entry.
-
-```BibTeX
-@article{yang2022parsing,
-  title={Deep Learning Technique for Human Parsing: A Survey and Outlook},
-  author={Lu Yang and Wenhe Jia and Shan Li and Qing Song},
-  journal={arXiv preprint arXiv:2301.00394},
-  year={2022}
-}
-```
+## <a name="CitingM2FP"></a>Citing MaskFormer and Mask2Former
 
 If you find the code useful, please also consider the following MaskFormer and Mask2Former BibTeX entry.
 
