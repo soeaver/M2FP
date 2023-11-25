@@ -92,6 +92,56 @@ def add_m2fp_config(cfg):
     cfg.MODEL.SWIN.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
     cfg.MODEL.SWIN.USE_CHECKPOINT = False
 
+    # Vision Transformer (ViT) backbone config
+    cfg.MODEL.VIT = CN()
+    cfg.MODEL.VIT.IMG_SIZE = 512
+    cfg.MODEL.VIT.PATCH_SIZE = 16
+    cfg.MODEL.VIT.EMBED_DIM = 768    # 768 for base, 1024 for large, 1280 for huge
+    cfg.MODEL.VIT.DEPTH = 12    # 12 for base, 24 for large, 32 for huge
+    cfg.MODEL.VIT.NUM_HEADS = 12    # 12 for base, 16 for large, 16 for huge
+    cfg.MODEL.VIT.MLP_RATIO = 4.0
+    cfg.MODEL.VIT.QKV_BIAS = True
+    cfg.MODEL.VIT.DROP_PATH_RATE = 0.1  # (MAE-pretraining) 0.1 for base, 0.4 for large, 0.5 for huge
+    cfg.MODEL.VIT.INIT_VALUES = None    # layer scale: 0.0001 for deit-3
+    cfg.MODEL.VIT.NORM_PRE = False
+    cfg.MODEL.VIT.NORM_POST = True
+    cfg.MODEL.VIT.SWIGLU = False
+    cfg.MODEL.VIT.USE_ABS_POS = True
+    cfg.MODEL.VIT.USE_REL_POS = False
+    cfg.MODEL.VIT.USE_ACT_CHECKPOINT = False
+    cfg.MODEL.VIT.PRETRAIN_IMG_SIZE = 224
+    cfg.MODEL.VIT.PRETRAIN_USE_CLS_TOKEN = True
+    cfg.MODEL.VIT.LR_DECAY_RATE = 1.0
+    cfg.MODEL.VIT.XFORMERS = True
+    cfg.MODEL.VIT.FREEZE = False
+
+    # LoRA config
+    cfg.MODEL.LORA = CN()
+    cfg.MODEL.LORA.LORA_BLOCK_INDEXES = []
+    cfg.MODEL.LORA.LORA_ALPHA = 1.0
+    cfg.MODEL.LORA.LORA_DIM = 8
+
+    # ToMe config
+    cfg.MODEL.TOME = CN()
+    cfg.MODEL.TOME.RATIO = 0.5
+    cfg.MODEL.TOME.SX = 2
+    cfg.MODEL.TOME.SY = 2
+    cfg.MODEL.TOME.USE_RAND = True
+    cfg.MODEL.TOME.MERGE_ATTN_INDEXES = []
+
+    # RepAdapter config
+    cfg.MODEL.REP_ADAPTER = CN()
+    cfg.MODEL.REP_ADAPTER.ADAPTER_BLOCK_INDEXES = []
+    cfg.MODEL.REP_ADAPTER.ADAPTER_HIDDEN_DIM = 8
+    cfg.MODEL.REP_ADAPTER.ADAPTER_SCALE = 1.0
+    cfg.MODEL.REP_ADAPTER.ADAPTER_GROUPS = 2
+    cfg.MODEL.REP_ADAPTER.ADAPTER_DROPOUT = 0.1
+    
+    # simple feature pyramid
+    cfg.MODEL.SFP = CN()
+    cfg.MODEL.SFP.SFP_DIM = 256
+    cfg.MODEL.SFP.SCALE_FACTORS = [4.0, 2.0, 1.0, 0.5]
+
     # transformer module
     cfg.MODEL.M2FP.TRANSFORMER_DECODER_NAME = "MultiScaleMaskedTransformerDecoder"
 

@@ -57,6 +57,7 @@ from m2fp import (
     build_detection_test_loader,
     load_image_into_numpy_array,
 )
+from m2fp.modeling.backbone.utils import get_vit_lr_decay_rate
 
 
 class Trainer(DefaultTrainer):
@@ -130,6 +131,9 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_optimizer(cls, cfg, model):
+        num_layers = cfg.MODEL.VIT.DEPTH
+        lr_decay_rate = cfg.MODEL.VIT.LR_DECAY_RATE
+        assert lr_decay_rate <= 1.0
         weight_decay_norm = cfg.SOLVER.WEIGHT_DECAY_NORM
         weight_decay_embed = cfg.SOLVER.WEIGHT_DECAY_EMBED
 
@@ -165,6 +169,11 @@ class Trainer(DefaultTrainer):
                 hyperparams = copy.copy(defaults)
                 if "backbone" in module_name:
                     hyperparams["lr"] = hyperparams["lr"] * cfg.SOLVER.BACKBONE_MULTIPLIER
+                    if lr_decay_rate != 1.0:
+                        hyperparams["lr"] *= get_vit_lr_decay_rate(
+                            f"{module_name}.{module_param_name}", num_layers=num_layers, lr_decay_rate=lr_decay_rate
+                        )
+                        print(f"{module_name}.{module_param_name}", hyperparams["lr"], value.numel(), value.requires_grad)
                 if (
                         "relative_position_bias_table" in module_param_name
                         or "absolute_pos_embed" in module_param_name
